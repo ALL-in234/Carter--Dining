@@ -164,46 +164,49 @@
     });
   }
 
-  function renderMenuList(menu) {
-    const container = document.getElementById('menuList');
-    container.innerHTML = '';
-    const categories = ['頭盤', '主食', '飲品'];
-    let hasItems = false;
+  <!-- 關鍵修改在這段 -->
+function renderMenuList(menu) {
+  const container = document.getElementById('menuList');
+  container.innerHTML = '';
+  const categories = ['頭盤', '主食', '飲品'];
+  let hasItems = false;
 
-    categories.forEach(cat => {
-      if (menu[cat] && menu[cat].length > 0) {
-        hasItems = true;
-        const header = document.createElement('h5');
-        header.textContent = cat;
-        header.className = 'mt-3 mb-2 text-primary';
-        container.appendChild(header);
+  categories.forEach(cat => {
+    const itemsObj = menu[cat] || {};
+    const items = Object.entries磁鐵(itemsObj);
+    if (items.length > 0) {
+      hasItems = true;
+      const header = document.createElement('h5');
+      header.textContent = cat;
+      header.className = 'mt-3 mb-2 text-primary';
+      container.appendChild(header);
 
-        menu[cat].forEach((item, idx) => {
-          const div = document.createElement('div');
-          div.className = 'menu-item-admin';
-          div.innerHTML = `
-            <div>
-              <strong>${item.title}</strong> - $${item.price}
-              ${item.label ? `<span class="badge bg-warning text-dark ms-2">${item.label}</span>` : ''}
-            </div>
-            <div class="menu-actions">
-              <button class="btn-edit" onclick="editItem('${cat}', ${idx})" title="編輯">
-                <i class="fas fa-pencil"></i>
-              </button>
-              <button class="btn-delete" onclick="deleteItem('${cat}', ${idx})" title="刪除">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          `;
-          container.appendChild(div);
-        });
-      }
-    });
-
-    if (!hasItems) {
-      container.innerHTML = '<p class="text-muted text-center">尚未新增任何菜式</p>';
+      items.forEach(([key, item]) => {
+        const div = document.createElement('div');
+        div.className = 'menu-item-admin';
+        div.innerHTML = `
+          <div>
+            <strong>${item.title}</strong> - $${item.price}
+            ${item.label ? `<span class="badge bg-warning text-dark ms-2">${item.label}</span>` : ''}
+          </div>
+          <div class="menu-actions">
+            <button class="btn-edit" onclick="editItem('${cat}', '${key}')" title="編輯">
+              <i class="fas fa-pencil"></i>
+            </button>
+            <button class="btn-delete" onclick="deleteItem('${cat}', '${key}')" title="刪除">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
     }
+  });
+
+  if (!hasItems) {
+    container.innerHTML = '<p class="text-muted text-center">尚未新增任何菜式</p>';
   }
+}
 
   function showAddForm() {
     currentEditId = null;
@@ -218,30 +221,21 @@
     document.getElementById('menuFormContainer').style.display = 'none';
   }
 
-  function editItem(cat, idx) {
-    menuRef.child(cat).child(idx).once('value', snapshot => {
-      const item = snapshot.val();
-      currentEditId = `${cat}_${idx}`;
-      document.getElementById('category').value = cat;
-      document.getElementById('title').value = item.title;
-      document.getElementById('price').value = item.price;
-      document.getElementById('description').value = item.description || '';
-      document.getElementById('spice').value = item.spice || 0;
-      document.getElementById('label').value = item.label || '';
-      document.getElementById('editId').value = currentEditId;
+  // 編輯時使用 key
+function editItem(cat, key) {
+  menuRef.child(cat).child(key).once('value', snapshot => {
+    const item = snapshot.val();
+    currentEditId = `${cat}_${key}`;
+    // ... 填入表單 ...
+  });
+}
 
-      const preview = document.getElementById('imagePreview');
-      if (item.image) {
-        preview.src = item.image;
-        preview.style.display = 'block';
-      } else {
-        preview.style.display = 'none';
-      }
-
-      document.getElementById('saveBtnText').textContent = '更新菜式';
-      document.getElementById('menuFormContainer').style.display = 'block';
-    });
+// 刪除時使用 key
+function deleteItem(cat, key) {
+  if (confirm('確定刪除這道菜？')) {
+    menuRef.child(cat).child(key).remove();
   }
+}
 
   function deleteItem(cat, idx) {
     if (confirm('確定刪除這道菜？')) {
@@ -254,7 +248,7 @@
     e.preventDefault();
     const cat = document.getElementById('category').value;
     const item = {
-      title: document.getElementById('title').value.value.trim(),
+      title: document.getElementById('title').value.trim(),
       price: parseInt(document.getElementById('price').value),
       description: document.getElementById('description').value.trim(),
       spice: parseInt(document.getElementById('spice').value),
@@ -362,4 +356,5 @@
 </script>
 </body>
 </html>
+
 
