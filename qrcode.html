@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
+<head><!DOCTYPE html>
+<html lang="zh-HK">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -11,16 +13,18 @@
     body { font-family: 'Microsoft JhengHei', sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; padding-bottom: 100px; margin: 0; }
     .navbar { background: var(--dark); box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1030; }
     .hero { background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIzMDBweCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIzMDBweCIgZmlsbD0iI2U3NGMzYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjRweCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Qcm9mZXNzaW9uYWwgUmVzdGF1cmFudCBTeXN0ZW08L3RleHQ+PC9zdmc+') center/cover; color: white; padding: 5rem 0 3rem; text-align: center; margin-bottom: 2rem; }
-    .menu-item { background: white; border-radius: 18px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1); transition: all 0.3s ease; height: 100%; display: flex; flex-direction: column; }
+    .menu-item { background: white; border-radius: 18px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1); transition: all 0.3s ease; height: 100%; display: flex; flex-direction: column; position: relative; }
     .menu-item:hover { transform: translateY(-6px); box-shadow: 0 15px 30px rgba(0,0,0,0.18); }
     .item-img { height: 180px; background: #eee; background-size: cover; background-position: center; position: relative; }
     .item-img::after { content: attr(data-label); position: absolute; bottom: 0; left: 0; background: rgba(231, 76, 60, 0.92); color: white; padding: 0.35rem 0.9rem; font-size: 0.8rem; font-weight: 600; border-radius: 0 12px 0 0; }
+    .soldout-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(231,76,60,0.9); color: white; padding: 8px 16px; border-radius: 12px; font-weight: bold; font-size: 1.1rem; }
     .quantity-control { display: flex; align-items: center; gap: 0.75rem; margin: 0.75rem 0; }
     .quantity-btn { width: 42px; height: 42px; border: 2.5px solid var(--secondary); background: white; color: var(--secondary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 1.1rem; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
     .quantity-btn:hover { background: var(--secondary); color: white; transform: scale(1.05); }
     .quantity-input { width: 60px; text-align: center; border: 2px solid #ddd; border-radius: 10px; padding: 0.4rem; font-weight: bold; font-size: 1.1rem; background: #f8f9fa; }
     .add-to-cart { background: var(--primary); color: white; border: none; padding: 0.65rem 1rem; border-radius: 30px; font-weight: bold; transition: all 0.3s; width: 100%; font-size: 1rem; margin-top: auto; }
     .add-to-cart:hover { background: #c0392b; }
+    .add-to-cart:disabled { background: #ccc; cursor: not-allowed; }
     .spice-level { display: inline-flex; gap: 3px; margin-top: 0.4rem; align-items: center; }
     .spice-pepper { color: #e74c3c; font-size: 0.9rem; }
     .cart-toggle { position: fixed; bottom: calc(env(safe-area-inset-bottom, 20px) + 20px); right: 20px; width: 64px; height: 64px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(231, 76, 60, 0.45); cursor: pointer; z-index: 1001; transition: all 0.3s; }
@@ -49,7 +53,9 @@
     </div>
   </section>
 
-  <div class="container" id="menu"></div>
+  <div class="container" id="menu">
+    <p class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin me-2"></i>載入菜單中...</p>
+  </div>
 
   <div class="cart-toggle" id="cartToggle">
     <i class="fas fa-shopping-cart fa-lg"></i>
@@ -137,50 +143,20 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
-    // === Firebase 設定（請替換）===
     const firebaseConfig = {
-        apiKey: "AIzaSyDXTIxs1g0nlXYybvzVWOQ5imVmRzffzLs",
-  authDomain: "carter-dining-cf224.firebaseapp.com",
-  databaseURL: "https://carter-dining-cf224-default-rtdb.firebaseio.com",
-  projectId: "carter-dining-cf224",
-  storageBucket: "carter-dining-cf224.firebasestorage.app",
-  messagingSenderId: "416091581958",
-  appId: "1:416091581958:web:3444dc94ef956d4b929d87",
-  measurementId: "G-PDRJC3N2H6"
+      apiKey: "AIzaSyDXTIxs1g0nlXYybvzVWOQ5imVmRzffzLs",
+      authDomain: "carter-dining-cf224.firebaseapp.com",
+      databaseURL: "https://carter-dining-cf224-default-rtdb.firebaseio.com",
+      projectId: "carter-dining-cf224",
+      storageBucket: "carter-dining-cf224.firebasestorage.app",
+      messagingSenderId: "416091581958",
+      appId: "1:416091581958:web:3444dc94ef956d4b929d87"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // === 菜單資料（可由後台同步）===
-    // === 從 Firebase 即時載入菜單 ===
-let menuData = [];
-const menuRef = db.ref('menu');
-
-function loadMenuFromFirebase() {
-  menuRef.on('value', snapshot => {
-    const data = snapshot.val() || {};
-    menuData = [];
-
-    // 支援動態分類
-    Object.keys(data).forEach(cat => {
-      const items = [];
-      Object.values(data[cat]).forEach(item => {
-        items.push({
-          title: item.title,
-          desc: item.description || '無描述',
-          price: item.price,
-          image: item.image || 'https://via.placeholder.com/400?text=No+Image',
-          spice: item.spice || 0,
-          label: item.label || ''
-        });
-      });
-      menuData.push({ category: cat, items });
-    });
-
-    loadMenu(); // 重新渲染畫面
-  });
-}
-
+    let menuData = [];
+    const menuRef = db.ref('menu');
     let cart = [];
     let pickupCounter = 1;
 
@@ -198,13 +174,36 @@ function loadMenuFromFirebase() {
       orderNotes: document.getElementById('orderNotes')
     };
 
-    // === 載入菜單 ===
+    function loadMenuFromFirebase() {
+      menuRef.on('value', snapshot => {
+        const data = snapshot.val() || {};
+        menuData = [];
+        Object.keys(data).forEach(cat => {
+          const items = [];
+          Object.values(data[cat]).forEach(item => {
+            if (item.hidden) return;
+            items.push({
+              title: item.title,
+              desc: item.description || '無描述',
+              price: item.price,
+              image: item.image || 'https://via.placeholder.com/400?text=No+Image',
+              spice: item.spice || 0,
+              label: item.label || '',
+              soldOut: item.soldOut || false
+            });
+          });
+          if (items.length > 0) menuData.push({ category: cat, items });
+        });
+        loadMenu();
+      });
+    }
+
     function loadMenu() {
       const container = document.getElementById('menu');
       if (menuData.length === 0) {
-    container.innerHTML = '<p class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin me-2"></i>載入菜單中...</p>';
-    return;
-  }
+        container.innerHTML = '<p class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin me-2"></i>載入菜單中...</p>';
+        return;
+      }
       container.innerHTML = '';
       menuData.forEach(cat => {
         const sec = document.createElement('div');
@@ -217,18 +216,22 @@ function loadMenuFromFirebase() {
           col.className = 'col-6 col-md-4';
           col.innerHTML = `
             <div class="menu-item">
-              <div class="item-img" style="background-image: url('${item.image}')" data-label="${item.label || ''}"></div>
+              <div class="item-img" style="background-image: url('${item.image}')" data-label="${item.label}">
+                ${item.soldOut ? '<div class="soldout-overlay">售完</div>' : ''}
+              </div>
               <div class="p-3 d-flex flex-column flex-grow-1">
                 <h5 class="item-title mb-1 fw-bold">${item.title}</h5>
                 <p class="item-desc text-muted small flex-grow-1">${item.desc}</p>
-                <div class="spice-level mb-2">${'<i class="fas fa-pepper-hot spice-pepper"></i>'.repeat(item.spice || 0)}</div>
+                <div class="spice-level mb-2">${'<i class="fas fa-pepper-hot spice-pepper"></i>'.repeat(item.spice)}</div>
                 <div class="item-price text-primary fw-bold mb-2">$${item.price}</div>
                 <div class="quantity-control">
                   <div class="quantity-btn minus">−</div>
                   <input type="text" class="quantity-input" value="0" readonly>
-                  <div class="quantity-btn plus">+</div>
+                  <div class="quantity-btn plus">${item.soldOut ? '' : '+'}</div>
                 </div>
-                <button class="add-to-cart mt-2">加入購物車</button>
+                <button class="add-to-cart mt-2 ${item.soldOut ? 'btn-secondary' : ''}" ${item.soldOut ? 'disabled' : ''}>
+                  ${item.soldOut ? '售完' : '加入購物車'}
+                </button>
               </div>
             </div>`;
           row.appendChild(col);
@@ -243,11 +246,13 @@ function loadMenuFromFirebase() {
         const plus = ctrl.querySelector('.plus');
         const input = ctrl.querySelector('.quantity-input');
         const btn = ctrl.closest('.menu-item').querySelector('.add-to-cart');
+        if (btn.disabled) return;
         plus.onclick = () => { input.value = +input.value + 1; updateBtn(btn, +input.value); };
         minus.onclick = () => { if (+input.value > 0) { input.value = +input.value - 1; updateBtn(btn, +input.value); }};
       });
 
       document.querySelectorAll('.add-to-cart').forEach(btn => {
+        if (btn.disabled) return;
         btn.onclick = () => {
           const item = btn.closest('.menu-item');
           const title = item.querySelector('.item-title').textContent;
@@ -335,10 +340,11 @@ function loadMenuFromFirebase() {
       });
     };
 
-    loadMenuFromFirebase();  // 改這行！啟用即時載入
-updateCart();
+    loadMenuFromFirebase();
+    updateCart();
   </script>
 </body>
 </html>
+
 
 
