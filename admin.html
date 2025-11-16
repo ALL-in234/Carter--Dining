@@ -8,27 +8,24 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
     body { font-family: 'Microsoft JhengHei', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; margin: 0; }
-    .admin-container { max-width: 1000px; margin: 2rem auto; padding: 1rem; }
-    .panel { background: white; border-radius: 15px; padding: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+    .admin-container { max-width: 1100px; margin: 2rem auto; padding: 1rem; }
+    .panel { background: white; border-radius: 15px; padding: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
     .order-item { background: #f8f9fa; border-radius: 10px; padding: 1rem; margin-bottom: 1rem; border-left: 4px solid #e74c3c; }
     .badge-new { background: #e74c3c; animation: pulse 2s infinite; }
     @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    .image-upload { border: 2px dashed #ddd; border-radius: 10px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s; margin-bottom: 1rem; }
+    .image-upload:hover { border-color: #e74c3c; background: #f8f9fa; }
+    .image-preview { max-width: 100%; max-height: 150px; object-fit: cover; border-radius: 10px; margin-top: 1rem; display: none; }
+    .menu-item-admin { background: #f8f9fa; border-radius: 10px; padding: 1rem; margin-bottom: 1rem; border-left: 4px solid #f39c12; position: relative; }
+    .menu-actions { position: absolute; top: 0.5rem; right: 0.5rem; display: flex; gap: 0.5rem; }
+    .btn-edit, .btn-delete { width: 35px; height: 35px; border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+    .btn-edit { background: #f39c12; color: white; }
+    .btn-delete { background: #e74c3c; color: white; }
   </style>
 </head>
 <body>
 
-<div class="admin-container" id="adminPanel" style="display:none;">
-  <div class="panel">
-    <h3><i class="fas fa-clipboard-list me-2"></i>即時訂單</h3>
-    <div id="ordersList">
-      <p class="text-muted text-center">載入中...</p>
-    </div>
-    <div class="mt-3 text-end">
-      <button class="btn btn-danger btn-sm" onclick="clearAll()" id="clearBtn" style="display:none;">清空所有</button>
-    </div>
-  </div>
-</div>
-
+<!-- 登入畫面 -->
 <div class="text-center p-5" id="loginScreen">
   <div class="card mx-auto" style="max-width: 400px;">
     <div class="card-body">
@@ -40,33 +37,284 @@
   </div>
 </div>
 
+<!-- 後台主畫面 -->
+<div class="admin-container" id="adminPanel" style="display:none;">
+  <!-- 訂單管理 -->
+  <div class="panel">
+    <h3><i class="fas fa-clipboard-list me-2"></i>即時訂單</h3>
+    <div id="ordersList" class="mb-3">
+      <p class="text-muted text-center">載入中...</p>
+    </div>
+    <div class="text-end">
+      <button class="btn btn-danger btn-sm" onclick="clearAllOrders()" id="clearOrdersBtn" style="display:none;">清空所有訂單</button>
+    </div>
+  </div>
+
+  <!-- 菜單管理 -->
+  <div class="panel">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h3><i class="fas fa-utensils me-2"></i>菜單管理</h3>
+      <button class="btn btn-success btn-sm" onclick="showAddForm()">
+        <i class="fas fa-plus me-1"></i>新增菜式
+      </button>
+    </div>
+
+    <!-- 新增/編輯表單 -->
+    <div id="menuFormContainer" style="display:none;">
+      <form id="menuForm">
+        <input type="hidden" id="editId">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">分類</label>
+            <select class="form-select" id="category">
+              <option value="頭盤">頭盤</option>
+              <option value="主食">主食</option>
+              <option value="飲品">飲品</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">菜名</label>
+            <input type="text" class="form-control" id="title" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">價格 ($)</label>
+            <input type="number" class="form-control" id="price" min="0" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">辣度 (0-3)</label>
+            <input type="range" class="form-range" id="spice" min="0" max="3" value="0">
+            <div class="d-flex justify-content-between small text-muted">
+              <span>不辣</span><span>微辣</span><span>中辣</span><span>很辣</span>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">描述</label>
+            <textarea class="form-control" id="description" rows="2"></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">標籤（可選）</label>
+            <input type="text" class="form-control" id="label" placeholder="例如：人氣、新品">
+          </div>
+          <div class="col-12">
+            <label class="form-label">圖片</label>
+            <div class="image-upload" id="dropZone">
+              <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+              <p>拖曳圖片至此，或點擊上傳</p>
+              <input type="file" id="imageInput" accept="image/*" style="display:none;">
+            </div>
+            <img id="imagePreview" class="image-preview" src="">
+          </div>
+          <div class="col-12 text-end">
+            <button type="button" class="btn btn-secondary me-2" onclick="hideForm()">取消</button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-1"></i><span id="saveBtnText">儲存菜式</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- 菜單列表 -->
+    <div id="menuList" class="mt-3">
+      <p class="text-muted text-center">載入中...</p>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
-  const firebaseConfig = {   apiKey: "AIzaSyDXTIxs1g0nlXYybvzVWOQ5imVmRzffzLs",
-  authDomain: "carter-dining-cf224.firebaseapp.com",
-  databaseURL: "https://carter-dining-cf224-default-rtdb.firebaseio.com",
-  projectId: "carter-dining-cf224",
-  storageBucket: "carter-dining-cf224.firebasestorage.app",
-  messagingSenderId: "416091581958",
-  appId: "1:416091581958:web:3444dc94ef956d4b929d87",
-  measurementId: "G-PDRJC3N2H6" };
+  // === Firebase 設定 ===
+  const firebaseConfig = {
+    apiKey: "AIzaSyDXTIxs1g0nlXYybvzVWOQ5imVmRzffzLs",
+    authDomain: "carter-dining-cf224.firebaseapp.com",
+    databaseURL: "https://carter-dining-cf224-default-rtdb.firebaseio.com",
+    projectId: "carter-dining-cf224",
+    storageBucket: "carter-dining-cf224.firebasestorage.app",
+    messagingSenderId: "416091581958",
+    appId: "1:416091581958:web:3444dc94ef956d4b929d87"
+  };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
+  const menuRef = db.ref('menu');
   const ordersRef = db.ref('orders');
 
-  const ADMIN_PASS = "ok220102"; // 建議改成環境變數
+  const ADMIN_PASS = "admin123";
 
+  // === 登入 ===
   function login() {
     if (document.getElementById('password').value === ADMIN_PASS) {
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('adminPanel').style.display = 'block';
+      loadMenu();
       loadOrders();
     } else {
       document.getElementById('error').style.display = 'block';
     }
   }
 
+  // === 菜單管理 ===
+  let currentEditId = null;
+
+  function loadMenu() {
+    menuRef.on('value', snapshot => {
+      const menu = snapshot.val() || {};
+      renderMenuList(menu);
+    });
+  }
+
+  function renderMenuList(menu) {
+    const container = document.getElementById('menuList');
+    container.innerHTML = '';
+    const categories = ['頭盤', '主食', '飲品'];
+    let hasItems = false;
+
+    categories.forEach(cat => {
+      if (menu[cat] && menu[cat].length > 0) {
+        hasItems = true;
+        const header = document.createElement('h5');
+        header.textContent = cat;
+        header.className = 'mt-3 mb-2 text-primary';
+        container.appendChild(header);
+
+        menu[cat].forEach((item, idx) => {
+          const div = document.createElement('div');
+          div.className = 'menu-item-admin';
+          div.innerHTML = `
+            <div>
+              <strong>${item.title}</strong> - $${item.price}
+              ${item.label ? `<span class="badge bg-warning text-dark ms-2">${item.label}</span>` : ''}
+            </div>
+            <div class="menu-actions">
+              <button class="btn-edit" onclick="editItem('${cat}', ${idx})" title="編輯">
+                <i class="fas fa-pencil"></i>
+              </button>
+              <button class="btn-delete" onclick="deleteItem('${cat}', ${idx})" title="刪除">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          `;
+          container.appendChild(div);
+        });
+      }
+    });
+
+    if (!hasItems) {
+      container.innerHTML = '<p class="text-muted text-center">尚未新增任何菜式</p>';
+    }
+  }
+
+  function showAddForm() {
+    currentEditId = null;
+    document.getElementById('menuFormContainer').style.display = 'block';
+    document.getElementById('menuForm').reset();
+    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('saveBtnText').textContent = '新增菜式';
+    document.getElementById('editId').value = '';
+  }
+
+  function hideForm() {
+    document.getElementById('menuFormContainer').style.display = 'none';
+  }
+
+  function editItem(cat, idx) {
+    menuRef.child(cat).child(idx).once('value', snapshot => {
+      const item = snapshot.val();
+      currentEditId = `${cat}_${idx}`;
+      document.getElementById('category').value = cat;
+      document.getElementById('title').value = item.title;
+      document.getElementById('price').value = item.price;
+      document.getElementById('description').value = item.description || '';
+      document.getElementById('spice').value = item.spice || 0;
+      document.getElementById('label').value = item.label || '';
+      document.getElementById('editId').value = currentEditId;
+
+      const preview = document.getElementById('imagePreview');
+      if (item.image) {
+        preview.src = item.image;
+        preview.style.display = 'block';
+      } else {
+        preview.style.display = 'none';
+      }
+
+      document.getElementById('saveBtnText').textContent = '更新菜式';
+      document.getElementById('menuFormContainer').style.display = 'block';
+    });
+  }
+
+  function deleteItem(cat, idx) {
+    if (confirm('確定刪除這道菜？')) {
+      menuRef.child(cat).child(idx).remove();
+    }
+  }
+
+  // === 表單提交 ===
+  document.getElementById('menuForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const cat = document.getElementById('category').value;
+    const item = {
+      title: document.getElementById('title').value.value.trim(),
+      price: parseInt(document.getElementById('price').value),
+      description: document.getElementById('description').value.trim(),
+      spice: parseInt(document.getElementById('spice').value),
+      label: document.getElementById('label').value.trim(),
+      image: document.getElementById('imagePreview').src
+    };
+
+    if (!item.title || !item.price) return alert('請填寫菜名和價格！');
+
+    if (currentEditId) {
+      const [editCat, editIdx] = currentEditId.split('_');
+      menuRef.child(editCat).child(editIdx).set(item);
+    } else {
+      menuRef.child(cat).push(item);
+    }
+
+    hideForm();
+    alert('儲存成功！');
+  });
+
+  // === 圖片上傳 ===
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('imageInput');
+  const preview = document.getElementById('imagePreview');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = '#e74c3c'; });
+  dropZone.addEventListener('dragleave', () => dropZone.style.borderColor = '#ddd');
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.style.borderColor = '#ddd';
+    if (e.dataTransfer.files.length) handleImage(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e => {
+    if (e.target.files.length) handleImage(e.target.files[0]);
+  });
+
+  function handleImage(file) {
+    if (!file.type.startsWith('image/')) return alert('請選擇圖片！');
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const max = 800;
+        let w = img.width, h = img.height;
+        if (w > h && w > max) { h = (max / w) * h; w = max; }
+        else if (h > max) { w = (max / h) * w; h = max; }
+        canvas.width = w; canvas.height = h;
+        ctx.drawImage(img, 0, 0, w, h);
+        const compressed = canvas.toDataURL('image/jpeg', 0.8);
+        preview.src = compressed;
+        preview.style.display = 'block';
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // === 訂單管理 ===
   function loadOrders() {
     const container = document.getElementById('ordersList');
     ordersRef.on('value', snapshot => {
@@ -74,15 +322,14 @@
       const list = Object.entries(orders).reverse();
       if (list.length === 0) {
         container.innerHTML = '<p class="text-muted text-center">尚未有訂單</p>';
-        document.getElementById('clearBtn').style.display = 'none';
+        document.getElementById('clearOrdersBtn').style.display = 'none';
         return;
       }
-      document.getElementById('clearBtn').style.display = 'block';
+      document.getElementById('clearOrdersBtn').style.display = 'block';
       container.innerHTML = '';
       list.forEach(([id, order]) => {
         const time = new Date(order.timestamp).toLocaleString('zh-HK');
-        let items = '';
-        let total = 0;
+        let items = '', total = 0;
         order.items.forEach(item => {
           total += item.price * item.quantity;
           items += `<div class="small"><strong>${item.title}</strong> ×${item.quantity} = $${item.price * item.quantity}</div>`;
@@ -106,13 +353,13 @@
   }
 
   function deleteOrder(id) {
-    if (confirm('確定刪除？')) db.ref('orders/' + id).remove();
+    if (confirm('確定刪除？')) ordersRef.child(id).remove();
   }
 
-  function clearAll() {
-    if (confirm('確定清空所有訂單？')) db.ref('orders').remove();
+  function clearAllOrders() {
+    if (confirm('確定清空所有訂單？')) ordersRef.remove();
   }
 </script>
 </body>
-
 </html>
+
