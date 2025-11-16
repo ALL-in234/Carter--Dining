@@ -27,6 +27,7 @@
 </head>
 <body>
 
+<!-- 登入畫面 -->
 <div class="text-center p-5" id="loginScreen">
   <div class="card mx-auto" style="max-width: 400px;">
     <div class="card-body">
@@ -38,7 +39,9 @@
   </div>
 </div>
 
+<!-- 後台主畫面 -->
 <div class="admin-container" id="adminPanel" style="display:none;">
+  <!-- 訂單管理 -->
   <div class="panel">
     <h3><i class="fas fa-clipboard-list me-2"></i>即時訂單</h3>
     <div id="ordersList" class="mb-3">
@@ -49,6 +52,7 @@
     </div>
   </div>
 
+  <!-- 菜單管理 -->
   <div class="panel">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h3><i class="fas fa-utensils me-2"></i>菜單管理</h3>
@@ -57,6 +61,7 @@
       </button>
     </div>
 
+    <!-- 新增/編輯表單 -->
     <div id="menuFormContainer" style="display:none;">
       <form id="menuForm">
         <input type="hidden" id="editId">
@@ -93,7 +98,7 @@
             <input type="text" class="form-control" id="label" placeholder="例如：人氣、新品">
           </div>
           <div class="col-12">
-            <label class="form-label">圖片</label>
+            <label class="form-label">圖片（<strong class="text-muted">可選</strong>）</label>
             <div class="image-upload" id="dropZone">
               <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
               <p>拖曳圖片至此，或點擊上傳</p>
@@ -113,16 +118,19 @@
       </form>
     </div>
 
+    <!-- 菜單列表 -->
     <div id="menuList" class="mt-3">
       <p class="text-muted text-center">載入中...</p>
     </div>
   </div>
 </div>
 
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script>
+  // === Firebase 設定 ===
   const firebaseConfig = {
     apiKey: "AIzaSyDXTIxs1g0nlXYybvzVWOQ5imVmRzffzLs",
     authDomain: "carter-dining-cf224.firebaseapp.com",
@@ -143,6 +151,7 @@
   let currentEditId = null;
   let currentFile = null;
 
+  // === 登入 ===
   function login() {
     if (document.getElementById('password').value === ADMIN_PASS) {
       document.getElementById('loginScreen').style.display = 'none';
@@ -154,6 +163,7 @@
     }
   }
 
+  // === 菜單管理 ===
   function loadMenu() {
     menuRef.on('value', snapshot => {
       const menu = snapshot.val() || {};
@@ -226,6 +236,7 @@
     document.getElementById('saveBtnText').textContent = '新增菜式';
     document.getElementById('editId').value = '';
     document.querySelector('.progress').style.display = 'none';
+    document.getElementById('uploadStatus').textContent = '';
   }
 
   function hideForm() {
@@ -245,7 +256,7 @@
       document.getElementById('editId').value = currentEditId;
 
       const preview = document.getElementById('imagePreview');
-      if (item.image) {
+      if (item.image && !item.image.includes('placeholder')) {
         preview.src = item.image;
         preview.style.display = 'block';
       } else {
@@ -322,6 +333,7 @@
     if (!item.title || !item.price) return alert('請填寫菜名和價格！');
 
     let imageUrl = preview.src;
+
     if (currentFile) {
       uploadStatus.textContent = '上傳中...';
       const fileName = `${Date.now()}_${currentFile.name}`;
@@ -342,7 +354,12 @@
   });
 
   async function saveItem(item, imageUrl, cat) {
+    // 若無圖片或為 blob，使用預設圖
+    if (!imageUrl || imageUrl.startsWith('data:') || imageUrl.includes('blob:')) {
+      imageUrl = 'https://via.placeholder.com/400?text=No+Image';
+    }
     item.image = imageUrl;
+
     if (currentEditId) {
       const [editCat, editKey] = currentEditId.split('_');
       await menuRef.child(editCat).child(editKey).set(item);
@@ -353,6 +370,7 @@
     alert('儲存成功！');
     currentFile = null;
     progressBar.style.display = 'none';
+    uploadStatus.textContent = '';
   }
 
   // === 訂單管理 ===
@@ -403,6 +421,7 @@
 </script>
 </body>
 </html>
+
 
 
 
