@@ -152,16 +152,34 @@
     const db = firebase.database();
 
     // === 菜單資料（可由後台同步）===
-    const menuData = [
-      { category: "頭盤", items: [
-        { title: "香脆春卷 (4件)", desc: "新鮮蔬菜包裹，酥脆外皮", price: 48, image: "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?w=400", spice: 1, label: "人氣推薦" },
-        { title: "沙律", desc: "新鮮生菜、番茄、黃瓜", price: 38, image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400", spice: 0 }
-      ]},
-      { category: "主食", items: [
-        { title: "揚州炒飯", desc: "蝦仁、叉燒、蛋花", price: 68, image: "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400", spice: 0 },
-        { title: "宮保雞丁", desc: "嫩雞丁、花生、乾辣椒", price: 78, image: "https://images.unsplash.com/photo-1626082927389-7e8bc2c2f0c6?w=400", spice: 3, label: "辣" }
-      ]}
-    ];
+    // === 從 Firebase 即時載入菜單 ===
+let menuData = [];
+const menuRef = db.ref('menu');
+
+function loadMenuFromFirebase() {
+  menuRef.on('value', snapshot => {
+    const data = snapshot.val() || {};
+    menuData = [];
+
+    // 支援動態分類
+    Object.keys(data).forEach(cat => {
+      const items = [];
+      Object.values(data[cat]).forEach(item => {
+        items.push({
+          title: item.title,
+          desc: item.description || '無描述',
+          price: item.price,
+          image: item.image || 'https://via.placeholder.com/400?text=No+Image',
+          spice: item.spice || 0,
+          label: item.label || ''
+        });
+      });
+      menuData.push({ category: cat, items });
+    });
+
+    loadMenu(); // 重新渲染畫面
+  });
+}
 
     let cart = [];
     let pickupCounter = 1;
@@ -313,8 +331,9 @@
       });
     };
 
-    loadMenu();
-    updateCart();
+    loadMenuFromFirebase();  // 改這行！啟用即時載入
+updateCart();
   </script>
 </body>
 </html>
+
