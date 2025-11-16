@@ -201,6 +201,10 @@ function loadMenuFromFirebase() {
     // === 載入菜單 ===
     function loadMenu() {
       const container = document.getElementById('menu');
+      if (menuData.length === 0) {
+    container.innerHTML = '<p class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin me-2"></i>載入菜單中...</p>';
+    return;
+  }
       container.innerHTML = '';
       menuData.forEach(cat => {
         const sec = document.createElement('div');
@@ -336,4 +340,5 @@ updateCart();
   </script>
 </body>
 </html>
+
 
