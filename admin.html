@@ -553,6 +553,7 @@
 
   // ==================== 語音播報新訂單（防漏單） ====================
     // ==================== 超強語音播報（自訂內容 + 最靚女聲 + 金額 + 備註）===================
+    
   let lastOrderCount = 0;
   const speechSynth = window.speechSynthesis;
   let isSpeaking = false;
@@ -612,11 +613,21 @@
           if (!order.notified) {
             ordersRef.child(id).update({ notified: true });
 
-            //
+            // 計算總金額
+            const total = order.items.reduce((sum, item) => 
+              sum + item.price * item.quantity, 0);
 
-
+            speakNewOrder(order.table, total, order.notes);
+          }
+        });
+      }
+      lastOrderCount = totalOrders;
+    });
+  }
+ 
 </script>
 </body>
 </html>
+
 
 
