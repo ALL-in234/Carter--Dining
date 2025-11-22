@@ -554,78 +554,97 @@
   // ==================== 語音播報新訂單（防漏單） ====================
     // ==================== 超強語音播報（自訂內容 + 最靚女聲 + 金額 + 備註）===================
     
-  let lastOrderCount = 0;
-  const speechSynth = window.speechSynthesis;
-  let isSpeaking = false;
+  // ==================== 強制只用「微軟美佳」粵語女聲（最靚最穩）===================
+let lastOrderCount = 0;
+const speechSynth = window.speechSynthesis;
+let isSpeaking = false;
 
-  // 自動選最靚的粵語女聲（Windows 美佳 / macOS 小美 / Chrome 內建）
-  function getBestVoice() {
-    const voices = speechSynth.getVoices();
-    return voices.find(v => v.name.includes('Meijia')) ||      // Windows 最靚女聲
-           voices.find(v => v.lang === 'zh-HK') ||
-          
-  }
+// 只選「微軟美佳」這一把聲音（Windows 10/11 內建），其他全部不理
+function getMeijiaVoice() {
+  const voices = speechSynth.getVoices();
+  // 完整名稱通常是「Microsoft Meijia - Chinese (Hong Kong)」或類似
+  return voices.find(v => 
+    v.name.toLowerCase().includes('meijia') && 
+    v.lang === 'zh-HK'
+  );
+}
 
-  function speakNewOrder(table, total = 0, notes = '') {
-    if (isSpeaking) speechSynth.cancel();
+// 備用方案：如果真的找不到美佳，就用系統第一把粵語聲音（極少發生）
+function getFallbackVoice() {
+  const voices = speechSynth.getVoices();
+  return voices.find(v => v.lang === 'zh-HK') || voices[0];
+}
 
-    let msg = table.includes('取餐')
-      ? `外賣新訂單！取餐號碼 ${table.replace('取餐 ', '')}`
-      : `{table} 有新訂單！`;
+function speakNewOrder(table, total = 0, notes = '') {
+  if (isSpeaking) speechSynth.cancel();
 
-    if (total > 0) msg += `，總共 ${total} 蚊`;
-    if (notes && notes.trim()) msg += `，備註：${notes.trim()}`;
+  let msg = table.includes('取餐')
+    ? `外賣新訂單！取餐號碼 ${table.replace('取餐 ', '')}`
+    : `${table} 有新訂單！`;
 
-    const endings = ['喇！', '呀！', '喎！', '啦！', '！'];
-    msg += endings[Math.floor(Math.random() * endings.length)];
+  if (total > 0) msg += `，總共 ${total} 蚊`;
+  if (notes && notes.trim()) msg += `，備註：${notes.trim()}`;
 
-    const utterance = new SpeechSynthesisUtterance(msg);
-    utterance.lang = 'zh-HK';
-    utterance.rate = 1.1;   // 語速（0.8～1.1 都可以試）
-    utterance.pitch = 1.5;   // 越高越活潑
-    utterance.volume = 1;
-    utterance.voice = getBestVoice();
+  const endings = ['喇！', '呀！', '喎！', '啦！', '！'];
+  msg += endings[Math.floor(Math.random() * endings.length)];
 
-    utterance.onstart = () => isSpeaking = true;
-    utterance.onend = () => isSpeaking = false;
-    utterance.onerror = () => isSpeaking = false;
+  const utterance = new SpeechSynthesisUtterance(msg);
+  utterance.lang = 'zh-HK';
+  utterance.rate = 1.0;      // 語速自然
+  utterance.pitch = 1.2;     // 稍微活潑一點
+  utterance.volume = 1;
 
-    speechSynth.speak(utterance);
+  // 強制使用美佳聲音
+  const meijia = getMeijiaVoice();
+  utterance.voice = meijia || getFallbackVoice();
 
-    // 3.5 秒後重播一次（確保聽到）
-    setTimeout(() => {
-      if (!isSpeaking) speechSynth.speak(utterance);
-    }, 3500);
-  }
+  utterance.onstart = () => isSpeaking = true;
+  utterance.onend = () => isSpeaking = false;
+  utterance.onerror = () => isSpeaking = false;
 
-  // 啟動語音監聽（請確保這行有被呼叫）
-  function initVoiceNotification() {
-    if (Notification.permission === "default") Notification.requestPermission();
+  speechSynth.speak(utterance);
 
-    ordersRef.on('value', snapshot => {
-      const orders = snapshot.val() || {};
-      const totalOrders = Object.keys(orders).length;
+  // 3.5 秒後重播一次（確保廚房一定聽到）
+  setTimeout(() => {
+    if (!isSpeaking) speechSynth.speak(utterance);
+  }, 3500);
+}
 
-      if (totalOrders > lastOrderCount) {
-        Object.entries(orders).forEach(([id, order]) => {
-          if (!order.notified) {
-            ordersRef.child(id).update({ notified: true });
+// 啟動監聽（記得 auth.onAuthStateChanged 裡有呼叫 initVoiceNotification()）
+function initVoiceNotification() {
+  if (Notification.permission === "default") Notification.requestPermission();
 
-            // 計算總金額
-            const total = order.items.reduce((sum, item) => 
-              sum + item.price * item.quantity, 0);
+  ordersRef.on('value', snapshot => {
+    const orders = snapshot.val() || {};
+    const totalOrders = Object.keys(orders).length;
 
-            speakNewOrder(order.table, total, order.notes);
-          }
-        });
-      }
-      lastOrderCount = totalOrders;
-    });
-  }
+    if (totalOrders > lastOrderCount) {
+      Object.entries(orders).forEach(([id, order]) => {
+        if (!order.notified) {
+          ordersRef.child(id).update({ notified: true });
+
+          const total = order.items.reduce((sum, item) => 
+            sum + item.price * item.quantity, 0);
+
+          speakNewOrder(order.table, total, order.notes);
+        }
+      });
+    }
+    lastOrderCount = totalOrders;
+  });
+}
+
+// 確保聲音列表載入完成（重要！）
+speechSynth.onvoiceschanged = () => {
+  console.log("已載入語音，美佳聲音準備就緒");
+};
+// 保險起見再延遲一次
+setTimeout(() => speechSynth.getVoices(), 1000);
  
 </script>
 </body>
 </html>
+
 
 
 
