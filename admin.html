@@ -551,64 +551,64 @@
     if (confirm('確定清空所有訂單？')) ordersRef.remove();
   }
 
- let lastOrderCount = 0;
+let lastOrderCount = 0;
 const speechSynth = window.speechSynthesis;
-let isSpeaking = false;
 let tracyVoice = null;
 let voiceUnlocked = false;
+let voiceReady = false;
 
-// ===== 1. 精準鎖定 Microsoft Tracy（曉彤）粵語女聲 =====
+// ===== 1. 最廣最準找出 Tracy（包含 Online/Natural 版）=====
 function findTracyVoice() {
   if (tracyVoice) return tracyVoice;
 
   const voices = speechSynth.getVoices();
-  if (voices.length === 0) return null;
-
   tracyVoice = voices.find(v =>
-    v.lang === "zh-HK" && (
-      v.name.includes("Tracy") ||
+    v.lang.startsWith("zh-HK") && (
+      v.name.toLowerCase().includes("tracy") ||
       v.name.includes("曉彤") ||
-      v.name === "Microsoft Tracy - Chinese (Hong Kong)"
+      v.name.includes("Tracy")
     )
   );
-
+  if (tracyVoice) voiceReady = true;
   return tracyVoice || getFallbackVoice();
 }
 
 function getFallbackVoice() {
   const voices = speechSynth.getVoices();
-  return voices.find(v => v.lang === "zh-HK") ||
-         voices.find(v => v.lang.startsWith("zh")) ||
-         voices[0];
+  return voices.find(v => v.lang.startsWith("zh-HK")) || voices[0];
 }
 
-// ===== 2. 核心語音函數（極簡專業版）=====
-function speakNewOrder(table, notes = '') {
-  speechSynth.cancel();
+// ===== 2. 終極防呆語音函數 =====
+function speakNewOrder(table = '未知枱', notes = '') {
+  // 安全處理 null / undefined
+  table = String(table || '未知枱').trim();
+  notes = String(notes || '').trim();
 
-  // 首次必須用戶點擊解鎖（新版瀏覽器強制要求）
+  // 清理備註（移除換行、emoji、特殊符號，Tracy 讀唔到會怪叫）
+  notes = notes.replace(/[\r\n]/g, '，').replace(/[\u{1F600}-\u{1F6FF}]/gu, '');
+
+  speechSynth.cancel(); // 先清隊列
+
+  // 首次解鎖
   if (!voiceUnlocked) {
     if (confirm("請點擊「確定」解鎖 Tracy 甜美粵語語音（只需一次）")) {
-      const unlock = new SpeechSynthesisUtterance("，語音已解鎖。");
-      unlock.lang = "zh-HK";
-      speechSynth.speak(unlock);
+      const u = new SpeechSynthesisUtterance("，語音已解鎖。");
+      u.lang = "zh-HK";
+      speechSynth.speak(u);
       voiceUnlocked = true;
       setTimeout(() => speakNewOrder(table, notes), 1000);
     }
     return;
   }
 
-  // 極簡專業播報（零金額、零尾音）
   let msg = table.includes('取餐')
     ? `外賣新訂單，取餐號碼 ${table.replace('取餐 ', '')}`
     : `${table} 有新訂單`;
 
-  if (notes?.trim()) msg += `，備註 ${notes.trim()}`;
+  if (notes) msg += `，備註 ${notes}`;
+  msg += "。";
 
-  msg += "。";  // 乾淨結尾
-
-  const utterance = new SpeechSynthesisUtterance("，" + msg); // 開頭逗號強制粵語引擎
-
+  const utterance = new SpeechSynthesisUtterance("，" + msg);
   const voice = findTracyVoice();
   if (voice) utterance.voice = voice;
   utterance.lang = "zh-HK";
@@ -616,28 +616,19 @@ function speakNewOrder(table, notes = '') {
   utterance.pitch = 1.25;
   utterance.volume = 1;
 
-  utterance.onstart = () => isSpeaking = true;
-  utterance.onend   = () => isSpeaking = false;
-  utterance.onerror  = () => isSpeaking = false;
-
   speechSynth.speak(utterance);
 
-  // 重播一次（確保廚房聽到）
+  // 強制重播（連續多單都唔會漏）
   setTimeout(() => {
     if (!speechSynth.speaking && !speechSynth.pending) {
-      const repeat = new SpeechSynthesisUtterance("，" + msg);
-      repeat.voice = voice;
-      repeat.lang = "zh-HK";
-      speechSynth.speak(repeat);
+      speechSynth.speak(utterance);
     }
-  }, 5000);
+  }, 5200);
 }
 
-// ===== 3. Firebase 訂單監聽 =====
+// ===== 3. Firebase 監聽（全面防呆）=====
 function initVoiceNotification() {
-  if (Notification.permission === "default") {
-    Notification.requestPermission();
-  }
+  if (Notification.permission === "default") Notification.requestPermission();
 
   ordersRef.on('value', (snapshot) => {
     const orders = snapshot.val() || {};
@@ -645,9 +636,9 @@ function initVoiceNotification() {
 
     if (totalOrders > lastOrderCount) {
       Object.entries(orders).forEach(([id, order]) => {
-        if (!order.notified) {
+        if (!order?.notified) {
           ordersRef.child(id).child('notified').set(true);
-          speakNewOrder(order.table || '未知枱', order.notes || '');
+          speakNewOrder(order?.table, order?.notes);
         }
       });
     }
@@ -655,20 +646,19 @@ function initVoiceNotification() {
   });
 }
 
-// ===== 4. 確保語音列表一定載入 =====
+// ===== 4. 強制語音隨時可用（解決切 tab 後消失問題）=====
 speechSynth.onvoiceschanged = () => {
   tracyVoice = null;
   findTracyVoice();
-  console.log("Tracy 粵語語音已載入 ✅");
 };
 
-// 保險：有些瀏覽器 onvoiceschanged 不觸發
-setTimeout(() => {
-  if (speechSynth.getVoices().length > 0 && !tracyVoice) {
-    findTracyVoice();
-    console.log("強制載入 Tracy 語音成功 ✅");
-  }
-}, 2000);
+setInterval(() => {
+  if (speechSynth.getVoices().length > 0) findTracyVoice();
+}, 10000); // 每 10 秒自動刷新一次聲音列表
+
+// 首次強制載入
+setTimeout(findTracyVoice, 1500);
+setTimeout(findTracyVoice, 5000);
 
 // ===== 啟動 =====
 initVoiceNotification();
@@ -678,6 +668,7 @@ initVoiceNotification();
 </script>
 </body>
 </html>
+
 
 
 
