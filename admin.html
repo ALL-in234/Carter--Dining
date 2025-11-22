@@ -551,23 +551,27 @@
     if (confirm('確定清空所有訂單？')) ordersRef.remove();
   }
 
-  let lastOrderCount = 0;
+ let lastOrderCount = 0;
 const speechSynth = window.speechSynthesis;
 let isSpeaking = false;
 let tracyVoice = null;
 let voiceUnlocked = false;
 
-// ===== 精準找出 Microsoft Tracy =====
+// ===== 1. 精準鎖定 Microsoft Tracy（曉彤）粵語女聲 =====
 function findTracyVoice() {
   if (tracyVoice) return tracyVoice;
+
   const voices = speechSynth.getVoices();
-  tracyVoice = voices.find(v => 
+  if (voices.length === 0) return null;
+
+  tracyVoice = voices.find(v =>
     v.lang === "zh-HK" && (
-      v.name.includes("Tracy") || 
+      v.name.includes("Tracy") ||
       v.name.includes("曉彤") ||
       v.name === "Microsoft Tracy - Chinese (Hong Kong)"
     )
   );
+
   return tracyVoice || getFallbackVoice();
 }
 
@@ -578,33 +582,32 @@ function getFallbackVoice() {
          voices[0];
 }
 
-// ===== 核心語音（已完全移除金額播報）=====
-function speakNewOrder(table, total = 0, notes = '') {  // total 參數保留但不再用
+// ===== 2. 核心語音函數（極簡專業版）=====
+function speakNewOrder(table, notes = '') {
   speechSynth.cancel();
 
-  // 首次解鎖（只需一次）
+  // 首次必須用戶點擊解鎖（新版瀏覽器強制要求）
   if (!voiceUnlocked) {
     if (confirm("請點擊「確定」解鎖 Tracy 甜美粵語語音（只需一次）")) {
-      const unlock = new SpeechSynthesisUtterance("，語音解鎖成功");
+      const unlock = new SpeechSynthesisUtterance("，語音已解鎖。");
       unlock.lang = "zh-HK";
       speechSynth.speak(unlock);
       voiceUnlocked = true;
-      setTimeout(() => speakNewOrder(table, total, notes), 800);
+      setTimeout(() => speakNewOrder(table, notes), 1000);
     }
     return;
   }
 
-  // 只播桌號 + 備註（完全不提金額）
+  // 極簡專業播報（零金額、零尾音）
   let msg = table.includes('取餐')
-    ? `外賣新訂單！取餐號碼 ${table.replace('取餐 ', '')}`
-    : `${table} 有新訂單！`;
+    ? `外賣新訂單，取餐號碼 ${table.replace('取餐 ', '')}`
+    : `${table} 有新訂單`;
 
-  if (notes?.trim()) msg += `，備註：${notes.trim()}`;
+  if (notes?.trim()) msg += `，備註 ${notes.trim()}`;
 
-  const endings = ['喇！', '呀！', '喎！', '啦！', '！'];
-  msg += endings[Math.floor(Math.random() * endings.length)];
+  msg += "。";  // 乾淨結尾
 
-  const utterance = new SpeechSynthesisUtterance("，" + msg);
+  const utterance = new SpeechSynthesisUtterance("，" + msg); // 開頭逗號強制粵語引擎
 
   const voice = findTracyVoice();
   if (voice) utterance.voice = voice;
@@ -615,10 +618,11 @@ function speakNewOrder(table, total = 0, notes = '') {  // total 參數保留但
 
   utterance.onstart = () => isSpeaking = true;
   utterance.onend   = () => isSpeaking = false;
+  utterance.onerror  = () => isSpeaking = false;
 
   speechSynth.speak(utterance);
 
-  // 重播一次
+  // 重播一次（確保廚房聽到）
   setTimeout(() => {
     if (!speechSynth.speaking && !speechSynth.pending) {
       const repeat = new SpeechSynthesisUtterance("，" + msg);
@@ -626,12 +630,14 @@ function speakNewOrder(table, total = 0, notes = '') {  // total 參數保留但
       repeat.lang = "zh-HK";
       speechSynth.speak(repeat);
     }
-  }, 4500);
+  }, 5000);
 }
 
-// ===== Firebase 監聽（只傳 table 同 notes，total 唔使理）=====
+// ===== 3. Firebase 訂單監聽 =====
 function initVoiceNotification() {
-  if (Notification.permission === "default") Notification.requestPermission();
+  if (Notification.permission === "default") {
+    Notification.requestPermission();
+  }
 
   ordersRef.on('value', (snapshot) => {
     const orders = snapshot.val() || {};
@@ -641,7 +647,7 @@ function initVoiceNotification() {
       Object.entries(orders).forEach(([id, order]) => {
         if (!order.notified) {
           ordersRef.child(id).child('notified').set(true);
-          speakNewOrder(order.table || '未知枱', 0, order.notes || ''); // total 固定傳 0
+          speakNewOrder(order.table || '未知枱', order.notes || '');
         }
       });
     }
@@ -649,16 +655,22 @@ function initVoiceNotification() {
   });
 }
 
-// ===== 語音載入保險 =====
+// ===== 4. 確保語音列表一定載入 =====
 speechSynth.onvoiceschanged = () => {
   tracyVoice = null;
   findTracyVoice();
+  console.log("Tracy 粵語語音已載入 ✅");
 };
+
+// 保險：有些瀏覽器 onvoiceschanged 不觸發
 setTimeout(() => {
-  if (speechSynth.getVoices().length > 0 && !tracyVoice) findTracyVoice();
+  if (speechSynth.getVoices().length > 0 && !tracyVoice) {
+    findTracyVoice();
+    console.log("強制載入 Tracy 語音成功 ✅");
+  }
 }, 2000);
 
-// 啟動
+// ===== 啟動 =====
 initVoiceNotification();
 
 
@@ -666,6 +678,7 @@ initVoiceNotification();
 </script>
 </body>
 </html>
+
 
 
 
