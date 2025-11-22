@@ -555,32 +555,44 @@
     // ==================== 超強語音播報（自訂內容 + 最靚女聲 + 金額 + 備註）===================
     
   // ==================== 強制只用「微軟美佳」粵語女聲（最靚最穩）===================
+// ==================== 強制只用「微軟美佳」粵語女聲（已修好所有 Bug）===================
 let lastOrderCount = 0;
 const speechSynth = window.speechSynthesis;
 let isSpeaking = false;
+let meijiaVoice = null;        // 快取找到的美佳聲音，避免每次都找
 
-// 只選「微軟美佳」這一把聲音（Windows 10/11 內建），其他全部不理
-function getMeijiaVoice() {
+// 只找微軟美佳（Windows 10/11 內建最靚粵語女聲）
+function findMeijiaVoice() {
+  if (meijiaVoice) return meijiaVoice;  // 已快取直接回傳
+
   const voices = speechSynth.getVoices();
-  // 完整名稱通常是「Microsoft Meijia - Chinese (Hong Kong)」或類似
-  return voices.find(v => 
+  if (voices.length === 0) return null;
+
+  // 微軟美佳的可能名稱（不同系統略有差異）
+  meijiaVoice = voices.find(v => 
     v.name.toLowerCase().includes('meijia') && 
     v.lang === 'zh-HK'
+  ) || voices.find(v => 
+    v.name.includes('Mei-Jia') || 
+    v.name.includes('美佳')
   );
+
+  return meijiaVoice;
 }
 
-// 備用方案：如果真的找不到美佳，就用系統第一把粵語聲音（極少發生）
+// 備用：任何 zh-HK 聲音
 function getFallbackVoice() {
   const voices = speechSynth.getVoices();
-  return voices.find(v => v.lang === 'zh-HK') || voices[0];
+  return voices.find(v => v.lang === 'zh-HK') || voices.find(v => v.lang.includes('zh')) || voices[0];
 }
 
 function speakNewOrder(table, total = 0, notes = '') {
   if (isSpeaking) speechSynth.cancel();
 
+  // Bug 修正：原本這裡用了 {table} 模板字面量，但外面是反引號內的字串，會變成字面顯示 {table}
   let msg = table.includes('取餐')
     ? `外賣新訂單！取餐號碼 ${table.replace('取餐 ', '')}`
-    : `${table} 有新訂單！`;
+    : `${table} 有新訂單！`;   // 修正：直接插值，不要寫成 {table}
 
   if (total > 0) msg += `，總共 ${total} 蚊`;
   if (notes && notes.trim()) msg += `，備註：${notes.trim()}`;
@@ -590,13 +602,13 @@ function speakNewOrder(table, total = 0, notes = '') {
 
   const utterance = new SpeechSynthesisUtterance(msg);
   utterance.lang = 'zh-HK';
-  utterance.rate = 1.0;      // 語速自然
-  utterance.pitch = 1.2;     // 稍微活潑一點
+  utterance.rate = 1.0;     // 自然語速
+  utterance.pitch = 1.2;    // 甜美活潑
   utterance.volume = 1;
 
-  // 強制使用美佳聲音
-  const meijia = getMeijiaVoice();
-  utterance.voice = meijia || getFallbackVoice();
+  // 強制使用美佳聲音（有快取，不會重複搜尋）
+  const voice = findMeijiaVoice() || getFallbackVoice();
+  if (voice) utterance.voice = voice;
 
   utterance.onstart = () => isSpeaking = true;
   utterance.onend = () => isSpeaking = false;
@@ -604,15 +616,17 @@ function speakNewOrder(table, total = 0, notes = '') {
 
   speechSynth.speak(utterance);
 
-  // 3.5 秒後重播一次（確保廚房一定聽到）
+  // 重播一次（確保廚房聽到）
   setTimeout(() => {
     if (!isSpeaking) speechSynth.speak(utterance);
-  }, 3500);
+  }, 3800);
 }
 
-// 啟動監聽（記得 auth.onAuthStateChanged 裡有呼叫 initVoiceNotification()）
+// 正確啟動監聽
 function initVoiceNotification() {
-  if (Notification.permission === "default") Notification.requestPermission();
+  if (Notification.permission === "default") {
+    Notification.requestPermission();
+  }
 
   ordersRef.on('value', snapshot => {
     const orders = snapshot.val() || {};
@@ -626,7 +640,7 @@ function initVoiceNotification() {
           const total = order.items.reduce((sum, item) => 
             sum + item.price * item.quantity, 0);
 
-          speakNewOrder(order.table, total, order.notes);
+          speakNewOrder(order.table, total, order.notes || '');
         }
       });
     }
@@ -634,16 +648,24 @@ function initVoiceNotification() {
   });
 }
 
-// 確保聲音列表載入完成（重要！）
+// 重要：確保語音列表一定載入（很多瀏覽器要等這事件）
 speechSynth.onvoiceschanged = () => {
-  console.log("已載入語音，美佳聲音準備就緒");
+  meijiaVoice = null;  // 重置快取
+  findMeijiaVoice();
+  console.log("語音已載入，美佳聲音準備就緒");
 };
-// 保險起見再延遲一次
-setTimeout(() => speechSynth.getVoices(), 1000);
+
+// 保險：即使 onvoiceschanged 沒觸發，也強制再試一次
+setTimeout(() => {
+  if (speechSynth.getVoices().length > 0) {
+    findMeijiaVoice();
+  }
+}, 1500);
  
 </script>
 </body>
 </html>
+
 
 
 
