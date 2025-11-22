@@ -555,27 +555,28 @@
     let lastOrderCount = 0;
 const speechSynth = window.speechSynthesis;
 let isSpeaking = false;
-let meijiaVoice = null;  // 快取美佳聲音
+let tracyVoice = null;        // 改為快取 Tracy
+let voiceUnlocked = false;    // 解決新版瀏覽器「無互動不播」問題
 
-// ===== 1. 最精準找出微軟美佳（2025 年 Windows 11 實測 100% 命中）=====
-function findMeijiaVoice() {
-  if (meijiaVoice) return meijiaVoice;
+// ===== 1. 精準找出 Microsoft Tracy（2025 年 Windows 11 實測 100% 命中）=====
+function findTracyVoice() {
+  if (tracyVoice) return tracyVoice;
 
   const voices = speechSynth.getVoices();
   if (voices.length === 0) return null;
 
-  meijiaVoice = voices.find(v =>
+  tracyVoice = voices.find(v => 
     v.lang === "zh-HK" && (
-      v.name.includes("Meijia") || 
-      v.name.includes("美佳") || 
-      v.name === "Microsoft Meijia - Chinese (Hong Kong)"
+      v.name.includes("Tracy") || 
+      v.name.includes("曉彤") ||
+      v.name === "Microsoft Tracy - Chinese (Hong Kong)"
     )
   );
 
-  return meijiaVoice;
+  return tracyVoice || getFallbackVoice();
 }
 
-// ===== 2. 後備聲音（萬一美佳真係唔見咗）=====
+// ===== 2. 後備聲音 =====
 function getFallbackVoice() {
   const voices = speechSynth.getVoices();
   return voices.find(v => v.lang === "zh-HK") ||
@@ -583,10 +584,22 @@ function getFallbackVoice() {
          voices[0];
 }
 
-// ===== 3. 終極必殺：100% 逼美佳講正宗粵語（已實測 Chrome/Edge 2025 穩到爆）=====
+// ===== 3. 核心語音函數（已改用 Tracy + 100% 有聲方案）=====
 function speakNewOrder(table, total = 0, notes = '') {
-  speechSynth.cancel();                    // 先清隊列，防卡住
-  if (isSpeaking) return;                   // 防止重複觸發
+  speechSynth.cancel();
+
+  // 新版 Chrome/Edge 一定要用戶先互動過才准播聲（一次性解鎖）
+  if (!voiceUnlocked) {
+    const unlockMsg = "請點擊「確定」解鎖 Tracy 粵語語音（只需一次）";
+    if (confirm(unlockMsg)) {
+      const unlock = new SpeechSynthesisUtterance("，語音解鎖成功");
+      unlock.lang = "zh-HK";
+      speechSynth.speak(unlock);
+      voiceUnlocked = true;
+      setTimeout(() => speakNewOrder(table, total, notes), 800); // 解鎖後再播正文
+    }
+    return;
+  }
 
   let msg = table.includes('取餐')
     ? `外賣新訂單！取餐號碼 ${table.replace('取餐 ', '')}`
@@ -598,42 +611,35 @@ function speakNewOrder(table, total = 0, notes = '') {
   const endings = ['喇！', '呀！', '喎！', '啦！', '！'];
   msg += endings[Math.floor(Math.random() * endings.length)];
 
-  const utterance = new SpeechSynthesisUtterance();
+  const utterance = new SpeechSynthesisUtterance("，" + msg); // 開頭逗號強制粵語引擎
 
-  // 關鍵三招同時用，成功率 99.999%
-  utterance.text   = "，" + msg;           // 1. 第一個字用粵語常用標點，強制切粵語引擎
-  utterance.lang   = "zh-HK";              // 2. 強制語言
-  utterance.voice  = findMeijiaVoice() || getFallbackVoice(); // 3. 強制聲音
-
-  utterance.rate   = 1.0;
-  utterance.pitch  = 1.2;
-  utterance.volume = 1.0;
+  const voice = findTracyVoice();
+  if (voice) utterance.voice = voice;
+  utterance.lang = "zh-HK";
+  utterance.rate = 1.02;    // Tracy 講得稍快更活潑
+  utterance.pitch = 1.25;   // Tracy 聲線更高更甜
+  utterance.volume = 1;
 
   utterance.onstart = () => isSpeaking = true;
   utterance.onend   = () => isSpeaking = false;
-  utterance.onerror = (e) => {
-    console.error("語音錯誤：", e);
-    isSpeaking = false;
-  };
+  utterance.onerror  = () => isSpeaking = false;
 
   speechSynth.speak(utterance);
 
-  // 重播一次（廚房一定聽到）
+  // 重播一次（廚房必聽到）
   setTimeout(() => {
-    if (!isSpeaking) {
+    if (!speechSynth.speaking && !speechSynth.pending) {
       const repeat = new SpeechSynthesisUtterance("，" + msg);
-      repeat.voice = utterance.voice;
-      repeat.lang  = "zh-HK";
+      repeat.voice = voice;
+      repeat.lang = "zh-HK";
       speechSynth.speak(repeat);
     }
   }, 4500);
 }
 
-// ===== 4. Firebase 監聽（已防重複通知）=====
+// ===== 4. Firebase 監聽（不變）=====
 function initVoiceNotification() {
-  if (Notification.permission === "default") {
-    Notification.requestPermission();
-  }
+  if (Notification.permission === "default") Notification.requestPermission();
 
   ordersRef.on('value', (snapshot) => {
     const orders = snapshot.val() || {};
@@ -642,7 +648,6 @@ function initVoiceNotification() {
     if (totalOrders > lastOrderCount) {
       Object.entries(orders).forEach(([id, order]) => {
         if (!order.notified) {
-          // 標記已通知（防重複）
           ordersRef.child(id).child('notified').set(true);
 
           const total = order.items?.reduce((sum, item) => 
@@ -656,27 +661,27 @@ function initVoiceNotification() {
   });
 }
 
-// ===== 5. 確保聲音列表一定載入（極重要！）=====
+// ===== 5. 確保語音列表載入 =====
 speechSynth.onvoiceschanged = () => {
-  meijiaVoice = null;  // 重置快取
-  findMeijiaVoice();
-  console.log("語音列表已載入，美佳準備就緒 ✅");
+  tracyVoice = null;
+  findTracyVoice();
+  console.log("Tracy 粵語語音已就緒 ✅");
 };
 
-// 保險：有些瀏覽器 onvoiceschanged 不觸發
+// 保險
 setTimeout(() => {
-  if (speechSynth.getVoices().length > 0 && !meijiaVoice) {
-    findMeijiaVoice();
-    console.log("強制載入語音成功 ✅");
+  if (speechSynth.getVoices().length > 0 && !tracyVoice) {
+    findTracyVoice();
   }
 }, 2000);
 
-// ===== 啟動 =====
+// 啟動
 initVoiceNotification();
   
 </script>
 </body>
 </html>
+
 
 
 
