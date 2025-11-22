@@ -562,10 +562,8 @@
   function getBestVoice() {
     const voices = speechSynth.getVoices();
     return voices.find(v => v.name.includes('Meijia')) ||      // Windows 最靚女聲
-           voices.find(v => v.name.includes('Tingting')) ||    // macOS 小美
-           voices.find(v => v.name.includes('Microsoft')) ||   // 舊版慧慧
            voices.find(v => v.lang === 'zh-HK') ||
-           voices.find(v => v.lang.startsWith('zh'));
+          
   }
 
   function speakNewOrder(table, total = 0, notes = '') {
@@ -573,7 +571,7 @@
 
     let msg = table.includes('取餐')
       ? `外賣新訂單！取餐號碼 ${table.replace('取餐 ', '')}`
-      : `${table} 有新訂單！`;
+      : `{table} 有新訂單！`;
 
     if (total > 0) msg += `，總共 ${total} 蚊`;
     if (notes && notes.trim()) msg += `，備註：${notes.trim()}`;
@@ -583,8 +581,8 @@
 
     const utterance = new SpeechSynthesisUtterance(msg);
     utterance.lang = 'zh-HK';
-    utterance.rate = 0.95;   // 語速（0.8～1.1 都可以試）
-    utterance.pitch = 1.1;   // 越高越活潑
+    utterance.rate = 1.1;   // 語速（0.8～1.1 都可以試）
+    utterance.pitch = 1.5;   // 越高越活潑
     utterance.volume = 1;
     utterance.voice = getBestVoice();
 
@@ -628,6 +626,7 @@
 </script>
 </body>
 </html>
+
 
 
 
