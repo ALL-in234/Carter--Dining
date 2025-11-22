@@ -1,206 +1,133 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>後台管理 | Carter Dining</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
-    body { 
-      font-family: 'Microsoft JhengHei', sans-serif; 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-      min-height: 100vh; 
-      margin: 0; 
-    }
-    .admin-container { 
-      max-width: 1100px; 
-      margin: 2rem auto; 
-      padding: 1rem; 
-    }
-    .panel { 
-      background: white; 
-      border-radius: 15px; 
-      padding: 1.5rem; 
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
-      margin-bottom: 1.5rem; 
-    }
-    .order-item { 
-      background: #f8f9fa; 
-      border-radius: 10px; 
-      padding: 1rem; 
-      margin-bottom: 1rem; 
-      border-left: 4px solid #e74c3c; 
-    }
-    .badge-new { 
-      background: #e74c3c; 
-      animation: pulse 2s infinite; 
-    }
-    @keyframes pulse { 
-      0% { transform: scale(1); } 
-      50% { transform: scale(1.05); } 
-      100% { transform: scale(1); } 
-    }
-    .image-upload { 
-      border: 2px dashed #ddd; 
-      border-radius: 10px; 
-      padding: 2rem; 
-      text-align: center; 
-      cursor: pointer; 
-      transition: all 0.3s; 
-      margin-bottom: 1rem; 
-    }
-    .image-upload:hover { 
-      border-color: #e74c3c; 
-      background: #f8f9fa; 
-    }
-    .image-preview { 
-      max-width: 100%; 
-      max-height: 150px; 
-      object-fit: cover; 
-      border-radius: 10px; 
-      margin-top: 1rem; 
-      display: none; 
-    }
-    .menu-item-admin { 
-      background: #f8f9fa; 
-      border-radius: 10px; 
-      padding: 1rem; 
-      margin-bottom: 1rem; 
-      border-left: 4px solid #f39c12; 
-      position: relative; 
-    }
-    .menu-actions { 
-      position: absolute; 
-      top: 0.5rem; 
-      right: 0.5rem; 
-      display: flex; 
-      gap: 0.5rem; 
-    }
-    .btn-edit, .btn-delete, .btn-toggle-hide, .btn-toggle-soldout { 
-      width: 35px; 
-      height: 35px; 
-      border: none; 
-      border-radius: 50%; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      font-size: 0.9rem; 
-    }
-    .btn-edit { background: #f39c12; color: white; }
-    .btn-delete { background: #e74c3c; color: white; }
-    .btn-toggle-hide { }
-    .btn-toggle-soldout { 
-      font-size: 0.7rem; 
-      width: 50px; 
-      border-radius: 20px; 
-    }
-    .logout-btn { 
-      position: absolute; 
-      top: 1rem; 
-      right: 1rem; 
-      z-index: 10;
-    }
-    .spinner-border-sm { width: 1rem; height: 1rem; }
+    body { font-family: 'Microsoft JhengHei', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; margin: 0; }
+    .admin-container { max-width: 1200px; margin: 2rem auto; padding: 1rem; }
+    .panel { background: white; border-radius: 18px; padding: 1.8rem; box-shadow: 0 12px 35px rgba(0,0,0,0.12); margin-bottom: 2rem; position: relative; }
+    .order-item { background: #f8f9fa; border-radius: 14px; padding: 1.2rem; margin-bottom: 1rem; border-left: 6px solid #e74c3c; transition: all 0.3s; }
+    .order-item.completed { border-left-color: #27ae60; opacity: 0.85; }
+    .order-item:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+    .badge-new { background: #e74c3c; animation: pulse 2s infinite; font-size: 0.8rem; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+    .menu-item-admin { background: #f8f9fa; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; border-left: 4px solid #f39c12; }
+    .image-upload { border: 3px dashed #ddd; border-radius: 14px; padding: 2.5rem; text-align: center; cursor: pointer; transition: all 0.3s; background: #f9f9f9; }
+    .image-upload:hover { border-color: #e74c3c; background: #fff5f5; }
+    .image-preview { max-height: 180px; object-fit: cover; border-radius: 12px; margin-top: 1rem; }
+    .logout-btn { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+    .print-btn { background: #2ecc71; color: white; }
+    .print-btn:hover { background: #27ae60; }
   </style>
 </head>
 <body>
 
 <!-- 登入畫面 -->
 <div class="text-center p-5" id="loginScreen">
-  <div class="card mx-auto" style="max-width: 400px;">
-    <div class="card-body">
-      <h4 class="mb-4">管理員登入</h4>
+  <div class="card mx-auto shadow-lg" style="max-width: 420px;">
+    <div class="card-body p-5">
+      <h3 class="mb-4 text-primary"><i class="fas fa-shield-alt me-2"></i>管理員登入</h3>
       <div class="mb-3">
-        <input type="email" class="form-control" id="loginEmail" placeholder="電郵地址" value="admin@carterdining.com">
+        <input type="email" class="form-control form-control-lg" id="loginEmail" value="admin@carterdining.com" placeholder="電郵">
       </div>
-      <div class="mb-3">
-        <input type="password" class="form-control" id="loginPassword" placeholder="密碼">
+      <div class="mb-4">
+        <input type="password" class="form-control form-control-lg" id="loginPassword" placeholder="密碼">
       </div>
-      <button class="btn btn-primary w-100 mb-2" id="loginBtn">
-        <span class="spinner-border spinner-border-sm d-none" id="loginSpinner"></span>
-        登入
+      <button class="btn btn-primary btn-lg w-100" id="loginBtn">
+        <span class="spinner-border spinner-border-sm me-2 d-none" id="loginSpinner"></span>
+        登入後台
       </button>
-      <div class="text-danger mt-2" id="loginError" style="display:none;"></div>
+      <div class="text-danger mt-3 fw-bold" id="loginError" style="display:none;"></div>
     </div>
   </div>
 </div>
 
-<!-- 後台主畫面 -->
-<div class="admin-container" id="adminPanel" style="display:none; position:relative;">
-  <button class="btn btn-outline-light btn-sm logout-btn" id="logoutBtn">
-    登出
+<!-- 主後台 -->
+<div class="admin-container" id="adminPanel" style="display:none;">
+  <button class="btn btn-outline-light btn-lg shadow logout-btn" id="logoutBtn">
+    <i class="fas fa-sign-out-alt me-2"></i>登出
   </button>
 
-  <!-- 訂單管理 -->
+  <!-- 即時訂單 -->
   <div class="panel">
-    <h3>即時訂單</h3>
-    <div id="ordersList" class="mb-3">
-      <p class="text-muted text-center">載入中...</p>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3><i class="fas fa-bell text-danger me-2"></i>即時訂單 <span class="badge bg-danger" id="newOrderCount">0</span></h3>
+      <button class="btn btn-warning btn-sm" onclick="printAllPending()">
+        <i class="fas fa-print me-2"></i>列印全部新單
+      </button>
     </div>
-    <div class="text-end">
-      <button class="btn btn-danger btn-sm" onclick="clearAllOrders()" id="clearOrdersBtn" style="display:none;">清空所有訂單</button>
+    <div id="ordersList">
+      <p class="text-center text-muted py-5"><i class="fas fa-spinner fa-spin fa-2x"></i></p>
     </div>
   </div>
 
   <!-- 菜單管理 -->
   <div class="panel">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h3>菜單管理</h3>
-      <button class="btn btn-success btn-sm" onclick="showAddForm()">
-        新增菜式
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3><i class="fas fa-utensils text-success me-2"></i>菜單管理</h3>
+      <button class="btn btn-success btn-lg" onclick="showAddForm()">
+        <i class="fas fa-plus me-2"></i>新增菜式
       </button>
     </div>
 
     <!-- 新增/編輯表單 -->
-    <div id="menuFormContainer" style="display:none;">
+    <div id="menuFormContainer" class="border rounded-4 p-4 bg-light" style="display:none;">
       <form id="menuForm">
-        <input type="hidden" id="editId">
+        <input type="hidden" id="editCat">
+        <input type="hidden" id="editKey">
+        <input type="hidden" id="oldImageUrl">
         <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">分類</label>
+          <div class="col-md-4">
+            <label class="form-label fw-bold">分類</label>
             <select class="form-select" id="category">
               <option value="頭盤">頭盤</option>
               <option value="主食">主食</option>
               <option value="飲品">飲品</option>
             </select>
           </div>
-          <div class="col-md-6">
-            <label class="form-label">菜名</label>
-            <input type="text" class="form-control" id=" dicht" required>
+          <div class="col-md-8">
+            <label class="form-label fw-bold">菜名</label>
+            <input type="text" class="form-control" id="title" required>
           </div>
-          <div class="col-md-6">
-            <label class="form-label">價格 ($)</label>
+          <div class="col-md-4">
+            <label class="form-label fw-bold">價格 ($)</label>
             <input type="number" class="form-control" id="price" min="0" required>
           </div>
-          <div class="col-md-6">
-            <label class="form-label">辣度 (0-3)</label>
+          <div class="col-md-4">
+            <label class="form-label fw-bold">辣度</label>
             <input type="range" class="form-range" id="spice" min="0" max="3" value="0">
             <div class="d-flex justify-content-between small text-muted">
-              <span>不辣</span><span>微辣</span><span>中辣</span><span>很辣</span>
+              <span>不辣</span><span>微辣</span><span>中辣</span><span>超辣</span>
             </div>
           </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold">標籤（可選）</label>
+            <input type="text" class="form-control" id="label" placeholder="例：人氣、新品">
+          </div>
           <div class="col-12">
-            <label class="form-label">描述</label>
+            <label class="form-label fw-bold">描述</label>
             <textarea class="form-control" id="description" rows="2"></textarea>
           </div>
-          <12>
-            <label class="form-label">標籤（可選）</label>
-            <input type="text" class="form-control" id="label" placeholder="例如：人氣、新品">
-          </div>
           <div class="col-12">
-            <label class="form-label">圖片（可選）</label>
+            <label class="form-label fw-bold">圖片</label>
             <div class="image-upload" id="dropZone">
-              拖曳圖片至此，或點擊上傳
+              <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+              <p>拖曳圖片至此，或點擊上傳</p>
               <input type="file" id="imageInput" accept="image/*" style="display:none;">
             </div>
-            <img id="imagePreview" class="image-preview" src="">
-            <div class="progress mt-2" style="height: 6px; display:none;"><div class="progress-bar" style="width:0%"></div></div>
-            <small class="text-muted" id="uploadStatus">準備上傳...</small>
+            <img id="imagePreview" class="image-preview w-100" style="display:none;" src="">
+            <div class="progress mt-3" style="height:8px; display:none;">
+              <div class="progress-bar" id="progressBar" style="width:0%"></div>
+            </div>
+            <small class="text-muted" id="uploadStatus"></small>
           </div>
-          <div class="col-12 text-end">
-            <button type="button" class="btn btn-secondary me-2" onclick="hideForm()">取消</button>
-            <button type="submit" class="btn btn-primary">
+          <div class="col-12 text-end mt-4">
+            <button type="button" class="btn btn-secondary btn-lg me-3" onclick="hideForm()">取消</button>
+            <button type="submit" class="btn btn-primary btn-lg px-5">
               <span id="saveBtnText">儲存菜式</span>
             </button>
           </div>
@@ -208,21 +135,16 @@
       </form>
     </div>
 
-    <!-- 菜單列表 -->
-    <div id="menuList" class="mt-3">
-      <p class="text-muted text-center">載入中...</p>
-    </div>
+    <div id="menuList" class="mt-4"></div>
   </div>
 </div>
 
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
 <script>
-  // === Firebase 設定 ===
   const firebaseConfig = {
     apiKey: "AIzaSyDXTIxs1g0nlXYybvzVWOQ5imVmRzffzLs",
     authDomain: "carter-dining-cf224.firebaseapp.com",
@@ -235,79 +157,43 @@
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.database();
-  const storage = firebase.storage();
+  const storage = firebase.storage().ref();
   const menuRef = db.ref('menu');
   const ordersRef = db.ref('orders');
-  const storageRef = storage.ref();
 
-  let currentEditId = null;
   let currentFile = null;
+  let editCat = null, editKey = null, oldImageUrl = null;
 
-  // === 元素 ===
-  const els = {
-    loginScreen: document.getElementById('loginScreen'),
-    adminPanel: document.getElementById('adminPanel'),
-    loginEmail: document.getElementById('loginEmail'),
-    loginPassword: document.getElementById('loginPassword'),
-    loginBtn: document.getElementById('loginBtn'),
-    loginSpinner: document.getElementById('loginSpinner'),
-    loginError: document.getElementById('loginError'),
-    logoutBtn: document.getElementById('logoutBtn')
-  };
-
-  // === 登入狀態監聽 ===
+  // 登入狀態
   auth.onAuthStateChanged(user => {
     if (user) {
-      els.loginScreen.style.display = 'none';
-      els.adminPanel.style.display = 'block';
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('adminPanel').style.display = 'block';
       loadMenu();
       loadOrders();
-      initVoiceNotification();   // 登入成功後啟動語音通知
+      initVoice();
     } else {
-      els.loginScreen.style.display = 'block';
-      els.adminPanel.style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'block';
+      document.getElementById('adminPanel').style.display = 'none';
     }
   });
 
-  // === 登入 ===
-  els.loginBtn.onclick = () => {
-    const email = els.loginEmail.value.trim();
-    const password = els.loginPassword.value;
-    if (!email || !password) return showError('請輸入電郵和密碼');
-
-    els.loginSpinner.classList.remove('d-none');
-    els.loginBtn.disabled = true;
-    els.loginError.style.display = 'none';
-
-    auth.signInWithEmailAndPassword(email, password)
-      .catch(err => {
-        els.loginSpinner.classList.add('d-none');
-        els.loginBtn.disabled = false;
-        showError(getErrorMessage(err.code));
-      });
+  document.getElementById('loginBtn').onclick = () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPassword').value;
+    if (!email || !pass) return alert('請輸入電郵和密碼');
+    document.getElementById('loginSpinner').classList.remove('d-none');
+    auth.signInWithEmailAndPassword(email, pass)
+      .catch(err => alert('登入失敗：' + err.message))
+      .finally(() => document.getElementById('loginSpinner').classList.add('d-none'));
   };
 
-  els.logoutBtn.onclick = () => auth.signOut();
+  document.getElementById('logoutBtn').onclick = () => auth.signOut();
 
-  function showError(msg) {
-    els.loginError.textContent = msg;
-    els.loginError.style.display = 'block';
-  }
-
-  function getErrorMessage(code) {
-    const map = {
-      'auth/user-not-found': '用戶不存在',
-      'auth/wrong-password': '密碼錯誤',
-      'auth/invalid-email': '電郵格式錯誤',
-      'auth/too-many-requests': '嘗試次數過多，請稍後再試',
-    };
-    return map[code] || '登入失敗，請重試';
-  }
-
-  // ==================== 菜單管理 ====================
+  // 菜單管理
   function loadMenu() {
-    menuRef.on('value', snapshot => {
-      const menu = snapshot.val() || {};
+    menuRef.on('value', snap => {
+      const menu = snap.val() || {};
       renderMenuList(menu);
     });
   }
@@ -315,362 +201,221 @@
   function renderMenuList(menu) {
     const container = document.getElementById('menuList');
     container.innerHTML = '';
-    const categories = ['頭盤', '主食', '飲品'];
-    let hasItems = false;
-
-    categories.forEach(cat => {
-      const itemsObj = menu[cat] || {};
-      const items = Object.entries(itemsObj);
-      if (items.length > 0) {
-        hasItems = true;
-        const header = document.createElement('h5');
-        header.textContent = cat;
-        header.className = 'mt-3 mb-2 text-primary';
-        container.appendChild(header);
-
-        items.forEach(([key, item]) => {
-          const div = document.createElement('div');
-          div.className = 'menu-item-admin';
-          div.innerHTML = `
-            <div>
-              <strong>${item.title}</strong> - $${item.price}
-              ${item.label ? `<span class="badge bg-warning text-dark ms-2">${item.label}</span>` : ''}
-              ${item.hidden ? `<span class="badge bg-secondary ms-2">隱藏中</span>` : ''}
-              ${item.soldOut ? `<span class="badge bg-danger ms-2">售完</span>` : ''}
-            </div>
-            <div class="menu-actions">
-              <button class="btn-edit" onclick="editItem('${cat}', '${key}')" title="編輯">
-                編輯
-              </button>
-              <button class="btn-delete" onclick="deleteItem('${cat}', '${key}')" title="刪除">
-                刪除
-              </button>
-              <button class="btn-toggle-hide ${item.hidden ? 'btn-success' : 'btn-secondary'}" 
-                      onclick="toggleHide('${cat}', '${key}', ${item.hidden || false})" 
-                      title="${item.hidden ? '上架' : '下架'}">
-                ${item.hidden ? '顯示' : '隱藏'}
-              </button>
-              <button class="btn-toggle-soldout ${item.soldOut ? 'btn-danger' : 'btn-outline-danger'}" 
-                      onclick="toggleSoldOut('${cat}', '${key}', ${item.soldOut || false})">
-                ${item.soldOut ? '恢復' : '售完'}
-              </button>
-            </div>
-          `;
-          container.appendChild(div);
-        });
-      }
-    });
-
-    if (!hasItems) container.innerHTML = '<p class="text-muted text-center">尚未新增任何菜式</p>';
-  }
-
-  function showAddForm() {
-    currentEditId = null;
-    currentFile = null;
-    document.getElementById('menuFormContainer').style.display = 'block';
-    document.getElementById('menuForm').reset();
-    document.getElementById('imagePreview').style.display = 'none';
-    document.getElementById('saveBtnText').textContent = '新增菜式';
-    document.getElementById('editId').value = '';
-    document.querySelector('.progress').style.display = 'none';
-    document.getElementById('uploadStatus').textContent = '';
-  }
-
-  function hideForm() {
-    document.getElementById('menuFormContainer').style.display = 'none';
-  }
-
-  function editItem(cat, key) {
-    menuRef.child(cat).child(key).once('value', snapshot => {
-      const item = snapshot.val();
-      currentEditId = `${cat}_${key}`;
-      document.getElementById('category').value = cat;
-      document.getElementById('title').value = item.title;
-      document.getElementById('price').value = item.price;
-      document.getElementById('description').value = item.description || '';
-      document.getElementById('spice').value = item.spice || 0;
-      document.getElementById('label').value = item.label || '';
-      document.getElementById('editId').value = currentEditId;
-
-      const preview = document.getElementById('imagePreview');
-      if (item.image && !item.image.includes('placeholder')) {
-        preview.src = item.image;
-        preview.style.display = 'block';
-      } else {
-        preview.style.display = 'none';
-      }
-
-      document.getElementById('saveBtnText').textContent = '更新菜式';
-      document.getElementById('menuFormContainer').style.display = 'block';
-    });
-  }
-
-  function deleteItem(cat, key) {
-    if (confirm('確定永久刪除這道菜？')) menuRef.child(cat).child(key).remove();
-  }
-
-  function toggleHide(cat, key, isHidden) {
-    if (confirm(isHidden ? '確定要上架？' : '確定要下架？')) {
-      menuRef.child(cat).child(key).update({ hidden: !isHidden });
-    }
-  }
-
-  function toggleSoldOut(cat, key, isSoldOut) {
-    if (confirm(isSoldOut ? '確定要重新上架？' : '確定要標記售完？')) {
-      menuRef.child(cat).child(key).update({ soldOut: !isSoldOut });
-    }
-  }
-
-  // === 圖片上傳 ===
-  const dropZone = document.getElementById('dropZone');
-  const fileInput = document.getElementById('imageInput');
-  const preview = document.getElementById('imagePreview');
-  const progressBar = document.querySelector('.progress');
-  const progressFill = progressBar.querySelector('.progress-bar');
-  const uploadStatus = document.getElementById('uploadStatus');
-
-  dropZone.addEventListener('click', () => fileInput.click());
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = '#e74c3c'; });
-  dropZone.addEventListener('dragleave', () => dropZone.style.borderColor = '#ddd');
-  dropZone.addEventListener('drop', e => {
-    e.preventDefault(); dropZone.style.borderColor = '#ddd';
-    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-  });
-  fileInput.addEventListener('change', e => {
-    if (e.target.files.length) handleFile(e.target.files[0]);
-  });
-
-  function handleFile(file) {
-    if (!file.type.startsWith('image/')) return alert('請選擇圖片！');
-    currentFile = file;
-    const reader = new FileReader();
-    reader.onload = e => {
-      preview.src = e.target.result;
-      preview.style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-    progressBar.style.display = 'block';
-    uploadStatus.textContent = '準備上傳...';
-  }
-
-  // === 表單提交 ===
-  document.getElementById('menuForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const cat = document.getElementById('category').value;
-    const item = {
-      title: document.getElementById('title').value.trim(),
-      price: parseInt(document.getElementById('price').value),
-      description: document.getElementById('description').value.trim(),
-      spice: parseInt(document.getElementById('spice').value),
-      label: document.getElementById('label').value.trim(),
-    };
-
-    if (!item.title || !item.price) return alert('請填寫菜名和價格！');
-
-    let imageUrl = preview.src;
-
-    if (currentFile) {
-      uploadStatus.textContent = '上傳中...';
-      const fileName = `${Date.now()}_${currentFile.name}`;
-      const fileRef = storageRef.child(`menu-images/${fileName}`);
-      const task = fileRef.put(currentFile);
-      task.on('state_changed', snap => {
-        const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
-        progressFill.style.width = pct + '%';
-      }, err => alert('上傳失敗：' + err.message), async () => {
-        imageUrl = await task.snapshot.ref.getDownloadURL();
-        await saveItem(item, imageUrl, cat);
-      });
-    } else {
-      await saveItem(item, imageUrl, cat);
-    }
-  });
-
-  async function saveItem(item, imageUrl, cat) {
-    if (!imageUrl || imageUrl.startsWith('data:') || imageUrl.includes('blob:')) {
-      imageUrl = 'https://via.placeholder.com/400?text=No+Image';
-    }
-    item.image = imageUrl;
-
-    if (currentEditId) {
-      const [editCat, editKey] = currentEditId.split('_');
-      await menuRef.child(editCat).child(editKey).set(item);
-    } else {
-      await menuRef.child(cat).push(item);
-    }
-    hideForm();
-    alert('儲存成功！');
-    currentFile = null;
-    progressBar.style.display = 'none';
-    uploadStatus.textContent = '';
-  }
-
-  // ==================== 訂單管理 ====================
-  function loadOrders() {
-    const container = document.getElementById('ordersList');
-    ordersRef.on('value', snapshot => {
-      const orders = snapshot.val() || {};
-      const list = Object.entries(orders).reverse();
-      if (list.length === 0) {
-        container.innerHTML = '<p class="text-muted text-center">尚未有訂單</p>';
-        document.getElementById('clearOrdersBtn').style.display = 'none';
-        return;
-      }
-      document.getElementById('clearOrdersBtn').style.display = 'block';
-      container.innerHTML = '';
-      list.forEach(([id, order]) => {
-        const time = new Date(order.timestamp).toLocaleString('zh-HK');
-        let items = '', total = 0;
-        order.items.forEach(item => {
-          total += item.price * item.quantity;
-          items += `<div class="small"><strong>${item.title}</strong> ×${item.quantity} = $${item.price * item.quantity}</div>`;
-        });
+    const cats = ['頭盤', '主食', '飲品'];
+    cats.forEach(cat => {
+      if (!menu[cat]) return;
+      const header = document.createElement('h5');
+      header.className = 'mt-4 mb-3 text-primary fw-bold';
+      header.textContent = cat;
+      container.appendChild(header);
+      Object.entries(menu[cat]).forEach(([key, item]) => {
         const div = document.createElement('div');
-        div.className = 'order-item';
+        div.className = 'menu-item-admin d-flex justify-content-between align-items-center';
         div.innerHTML = `
-          <div class="d-flex justify-content-between">
-            <strong>#${order.table}</strong>
-            <span class="badge badge-new">新訂單</span>
+          <div>
+            <strong>${item.title}</strong> $${item.price}
+            ${item.label ? `<span class="badge bg-warning text-dark ms-2">${item.label}</span>` : ''}
+            ${item.hidden ? `<span class="badge bg-secondary ms-2">隱藏</span>` : ''}
+            ${item.soldOut ? `<span class="badge bg-danger ms-2">售完</span>` : ''}
           </div>
-          <small class="text-muted">${time}</small>
-          <div class="mt-2">${items}</div>
-          <div class="mt-2"><strong>總計: $${total}</strong></div>
-          <div class="text-muted small">備註: ${order.notes || '無'}</div>
-          <button class="btn btn-sm btn-outline-danger mt-2" onclick="deleteOrder('${id}')">刪除</button>
+          <div>
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="editItem('${cat}','${key}')">編輯</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteItem('${cat}','${key}')">刪除</button>
+          </div>
         `;
         container.appendChild(div);
       });
     });
   }
 
-  function deleteOrder(id) {
-    if (confirm('確定刪除？')) ordersRef.child(id).remove();
+  window.showAddForm = () => {
+    editCat = editKey = oldImageUrl = null;
+    currentFile = null;
+    document.getElementById('menuFormContainer').style.display = 'block';
+    document.getElementById('menuForm').reset();
+    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('saveBtnText').textContent = '新增菜式';
+  };
+
+  window.hideForm = () => document.getElementById('menuFormContainer').style.display = 'none';
+
+  window.editItem = (cat, key) => {
+    menuRef.child(cat).child(key).once('value', snap => {
+      const item = snap.val();
+      editCat = cat; editKey = key; oldImageUrl = item.image;
+      document.getElementById('category').value = cat;
+      document.getElementById('title').value = item.title;
+      document.getElementById('price').value = item.price;
+      document.getElementById('description').value = item.description || '';
+      document.getElementById('spice').value = item.spice || 0;
+      document.getElementById('label').value = item.label || '';
+      if (item.image && !item.image.includes('placeholder')) {
+        document.getElementById('imagePreview').src = item.image;
+        document.getElementById('imagePreview').style.display = 'block';
+      }
+      document.getElementById('oldImageUrl').value = item.image || '';
+      document.getElementById('saveBtnText').textContent = '更新菜式';
+      document.getElementById('menuFormContainer').style.display = 'block';
+    });
+  };
+
+  window.deleteItem = (cat, key) => confirm('確定永久刪除？') && menuRef.child(cat).child(key).remove();
+
+  // 圖片上傳
+  const dropZone = document.getElementById('dropZone');
+  dropZone.onclick = () => document.getElementById('imageInput').click();
+  dropZone.ondragover = e => { e.preventDefault(); dropZone.style.borderColor = '#e74c3c'; };
+  dropZone.ondragleave = () => dropZone.style.borderColor = '#ddd';
+  dropZone.ondrop = e => { e.preventDefault(); dropZone.style.borderColor = '#ddd'; if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); };
+  document.getElementById('imageInput').onchange = e => e.target.files[0] && handleFile(e.target.files[0]);
+
+  function handleFile(file) {
+    if (!file.type.startsWith('image/')) return alert('請選擇圖片');
+    currentFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('imagePreview').src = e.target.result;
+      document.getElementById('imagePreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
   }
 
-  function clearAllOrders() {
-    if (confirm('確定清空所有訂單？')) ordersRef.remove();
-  }
+  // 儲存菜式
+  document.getElementById('menuForm').onsubmit = async e => {
+    e.preventDefault();
+    const item = {
+      title: document.getElementById('title').value.trim(),
+      price: parseInt(document.getElementById('price').value),
+      description: document.getElementById('description').value.trim(),
+      spice: parseInt(document.getElementById('spice').value),
+      label: document.getElementById('label').value.trim() || null,
+      hidden: false,
+      soldOut: false
+    };
 
-let lastOrderCount = 0;
-const speechSynth = window.speechSynthesis;
-let tracyVoice = null;
-let voiceUnlocked = false;
-let voiceReady = false;
+    let imageUrl = document.getElementById('oldImageUrl').value || 'https://via.placeholder.com/400?text=No+Image';
 
-// ===== 1. 最廣最準找出 Tracy（包含 Online/Natural 版）=====
-function findTracyVoice() {
-  if (tracyVoice) return tracyVoice;
-
-  const voices = speechSynth.getVoices();
-  tracyVoice = voices.find(v =>
-    v.lang.startsWith("zh-HK") && (
-      v.name.toLowerCase().includes("tracy") ||
-      v.name.includes("曉彤") ||
-      v.name.includes("Tracy")
-    )
-  );
-  if (tracyVoice) voiceReady = true;
-  return tracyVoice || getFallbackVoice();
-}
-
-function getFallbackVoice() {
-  const voices = speechSynth.getVoices();
-  return voices.find(v => v.lang.startsWith("zh-HK")) || voices[0];
-}
-
-// ===== 2. 終極防呆語音函數 =====
-function speakNewOrder(table = '未知枱', notes = '') {
-  // 安全處理 null / undefined
-  table = String(table || '未知枱').trim();
-  notes = String(notes || '').trim();
-
-  // 清理備註（移除換行、emoji、特殊符號，Tracy 讀唔到會怪叫）
-  notes = notes.replace(/[\r\n]/g, '，').replace(/[\u{1F600}-\u{1F6FF}]/gu, '');
-
-  speechSynth.cancel(); // 先清隊列
-
-  // 首次解鎖
-  if (!voiceUnlocked) {
-    if (confirm("請點擊「確定」解鎖 Tracy 甜美粵語語音（只需一次）")) {
-      const u = new SpeechSynthesisUtterance("，語音已解鎖。");
-      u.lang = "zh-HK";
-      speechSynth.speak(u);
-      voiceUnlocked = true;
-      setTimeout(() => speakNewOrder(table, notes), 1000);
-    }
-    return;
-  }
-
-  let msg = table.includes('取餐')
-    ? `外賣新訂單，取餐號碼 ${table.replace('取餐 ', '')}`
-    : `${table} 有新訂單`;
-
-  if (notes) msg += `，備註 ${notes}`;
-  msg += "。";
-
-  const utterance = new SpeechSynthesisUtterance("，" + msg);
-  const voice = findTracyVoice();
-  if (voice) utterance.voice = voice;
-  utterance.lang = "zh-HK";
-  utterance.rate = 1.02;
-  utterance.pitch = 1.25;
-  utterance.volume = 1;
-
-  speechSynth.speak(utterance);
-
-  // 強制重播（連續多單都唔會漏）
-  setTimeout(() => {
-    if (!speechSynth.speaking && !speechSynth.pending) {
-      speechSynth.speak(utterance);
-    }
-  }, 5200);
-}
-
-// ===== 3. Firebase 監聽（全面防呆）=====
-function initVoiceNotification() {
-  if (Notification.permission === "default") Notification.requestPermission();
-
-  ordersRef.on('value', (snapshot) => {
-    const orders = snapshot.val() || {};
-    const totalOrders = Object.keys(orders).length;
-
-    if (totalOrders > lastOrderCount) {
-      Object.entries(orders).forEach(([id, order]) => {
-        if (!order?.notified) {
-          ordersRef.child(id).child('notified').set(true);
-          speakNewOrder(order?.table, order?.notes);
+    if (currentFile) {
+      const fileRef = storage.child(`menu-images/${Date.now()}_${currentFile.name}`);
+      const task = fileRef.put(currentFile);
+      task.on('state_changed', snap => {
+        const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
+        document.querySelector('.progress').style.display = 'block';
+        document.getElementById('progressBar').style.width = pct + '%';
+      }, err => alert('上傳失敗'), async () => {
+        imageUrl = await task.snapshot.ref.getDownloadURL();
+        if (oldImageUrl && !oldImageUrl.includes('placeholder')) {
+          storage.child(oldImageUrl.split('/o/')[1].split('?')[0]).delete().catch(() => {});
         }
+        saveMenuItem(item, imageUrl);
+      });
+    } else {
+      saveMenuItem(item, imageUrl);
+    }
+  };
+
+  function saveMenuItem(item, imageUrl) {
+    item.image = imageUrl;
+    if (editCat && editKey) {
+      menuRef.child(editCat).child(editKey).set(item).then(() => {
+        alert('更新成功！');
+        hideForm();
+      });
+    } else {
+      menuRef.child(document.getElementById('category').value).push(item).then(() => {
+        alert('新增成功！');
+        hideForm();
       });
     }
-    lastOrderCount = totalOrders;
-  });
-}
+  }
 
-// ===== 4. 強制語音隨時可用（解決切 tab 後消失問題）=====
-speechSynth.onvoiceschanged = () => {
-  tracyVoice = null;
-  findTracyVoice();
-};
+  // 訂單管理 + 語音
+  let lastOrderCount = 0;
+  function loadOrders() {
+    ordersRef.on('value', snap => {
+      const orders = snap.val() || {};
+      const total = Object.keys(orders).length;
+      const newCount = Object.values(orders).filter(o => o.status === 'new').length;
+      document.getElementById('newOrderCount').textContent = newCount;
 
-setInterval(() => {
-  if (speechSynth.getVoices().length > 0) findTracyVoice();
-}, 10000); // 每 10 秒自動刷新一次聲音列表
+      if (total > lastOrderCount) {
+        Object.entries(orders).forEach(([id, order]) => {
+          if (order.status === 'new' && !order.notified) {
+            ordersRef.child(id).update({ notified: true });
+            speakNewOrder(order.table, order.notes || '');
+          }
+        });
+      }
+      lastOrderCount = total;
+      renderOrders(orders);
+    });
+  }
 
-// 首次強制載入
-setTimeout(findTracyVoice, 1500);
-setTimeout(findTracyVoice, 5000);
+  function renderOrders(orders) {
+    const container = document.getElementById('ordersList');
+    const list = Object.entries(orders).reverse();
+    if (list.length === 0) {
+      container.innerHTML = '<p class="text-center text-muted py-5">暫無訂單</p>';
+      return;
+    }
+    container.innerHTML = '';
+    list.forEach(([id, order]) => {
+      const div = document.createElement('div');
+      div.className = `order-item ${order.status === 'completed' ? 'completed' : ''}`;
+      const time = new Date(order.timestamp).toLocaleString('zh-HK');
+      let items = '', total = 0;
+      order.items.forEach(i => {
+        total += i.price * i.quantity;
+        items += `<div class="small"><b>${i.title}</b> ×${i.quantity} = $${i.price * i.quantity}</div>`;
+      });
+      div.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <strong class="fs-5">#${order.table}</strong>
+            ${order.status === 'new' ? '<span class="badge badge-new ms-2">新訂單</span>' : '<span class="badge bg-success">已完成</span>'}
+            <small class="text-muted d-block">${time}</small>
+          </div>
+          <div>
+            ${order.status === 'new' ? `<button class="btn btn-success btn-sm me-2" onclick="completeOrder('${id}')">完成</button>` : ''}
+            <button class="btn btn-outline-danger btn-sm" onclick="deleteOrder('${id}')">刪除</button>
+          </div>
+        </div>
+        <div class="mt-3">${items}</div>
+        <div class="fw-bold mt-2 fs-5 text-primary">總計 $${total}</div>
+        ${order.notes ? `<div class="text-muted mt-2"><strong>備註：</strong>${order.notes}</div>` : ''}
+      `;
+      container.appendChild(div);
+    });
+  }
 
-// ===== 啟動 =====
-initVoiceNotification();
+  window.completeOrder = id => ordersRef.child(id).update({ status: 'completed' });
+  window.deleteOrder = id => confirm('確定刪除？') && ordersRef.child(id).remove();
 
+  // 最穩 Tracy 語音
+  let voiceReady = false;
+  function initVoice() {
+    setTimeout(() => speechSynthesis.getVoices(), 1000);
+  }
+  function speakNewOrder(table, notes) {
+    if (!voiceReady && !confirm("點擊「確定」解鎖 Tracy 甜美粵語語音（只需一次）")) return;
+    voiceReady = true;
 
-  
+    notes = notes.replace(/\n/g, '，').replace(/[\u{1F600}-\u{1F6FF}]/gu, '');
+    const msg = table.includes('取餐') ? `外賣新訂單，取餐號碼 ${table.replace('取餐 ', '')}` : `${table} 有新訂單${notes ? '，備註 ' + notes : ''}`;
+
+    const utter = new SpeechSynthesisUtterance("叮咚！" + msg);
+    const voices = speechSynthesis.getVoices();
+    const tracy = voices.find(v => v.lang.startsWith('zh-HK') && (v.name.includes('Tracy') || v.name.includes('曉彤'))) 
+                  || voices.find(v => v.lang.startsWith('zh'));
+    if (tracy) utter.voice = tracy;
+    utter.lang = 'zh-HK';
+    utter.rate = 1.0;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utter);
+  }
 </script>
 </body>
 </html>
-
-
-
 
 
 
