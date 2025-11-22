@@ -552,35 +552,40 @@
   }
 
   // ==================== 語音播報新訂單（防漏單） ====================
+    // ==================== 超強語音播報（自訂內容 + 最靚女聲 + 金額 + 備註）===================
   let lastOrderCount = 0;
   const speechSynth = window.speechSynthesis;
   let isSpeaking = false;
 
-  const voiceMessages = [
-    "有新訂單，請注意！",
-    "叮咚！有客人落單喇！",
-    "新訂單嚟咗！快啲睇下！",
-    "有客落單！",
-    "新訂單，請到後台查看！"
-  ];
+  // 自動選最靚的粵語女聲（Windows 美佳 / macOS 小美 / Chrome 內建）
+  function getBestVoice() {
+    const voices = speechSynth.getVoices();
+    return voices.find(v => v.name.includes('Meijia')) ||      // Windows 最靚女聲
+           voices.find(v => v.name.includes('Tingting')) ||    // macOS 小美
+           voices.find(v => v.name.includes('Microsoft')) ||   // 舊版慧慧
+           voices.find(v => v.lang === 'zh-HK') ||
+           voices.find(v => v.lang.startsWith('zh'));
+  }
 
-  function speakNewOrder(table) {
+  function speakNewOrder(table, total = 0, notes = '') {
     if (isSpeaking) speechSynth.cancel();
 
-    const msg = voiceMessages[Math.floor(Math.random() * voiceMessages.length)];
-    const fullMsg = `${msg} ${table}`;
+    let msg = table.includes('取餐')
+      ? `外賣新訂單！取餐號碼 ${table.replace('取餐 ', '')}`
+      : `${table} 有新訂單！`;
 
-    const utterance = new SpeechSynthesisUtterance(fullMsg);
+    if (total > 0) msg += `，總共 ${total} 蚊`;
+    if (notes && notes.trim()) msg += `，備註：${notes.trim()}`;
+
+    const endings = ['喇！', '呀！', '喎！', '啦！', '！'];
+    msg += endings[Math.floor(Math.random() * endings.length)];
+
+    const utterance = new SpeechSynthesisUtterance(msg);
     utterance.lang = 'zh-HK';
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
+    utterance.rate = 0.95;   // 語速（0.8～1.1 都可以試）
+    utterance.pitch = 1.1;   // 越高越活潑
     utterance.volume = 1;
-
-    const voices = speechSynth.getVoices();
-    const preferredVoice = voices.find(v => v.lang === 'zh-HK') ||
-                          voices.find(v => v.lang.startsWith('zh')) ||
-                          voices.find(v => v.name.includes('Chinese'));
-    if (preferredVoice) utterance.voice = preferredVoice;
+    utterance.voice = getBestVoice();
 
     utterance.onstart = () => isSpeaking = true;
     utterance.onend = () => isSpeaking = false;
@@ -588,40 +593,30 @@
 
     speechSynth.speak(utterance);
 
-    // 桌面通知
-    if (Notification.permission === "granted") {
-      new Notification("新訂單來了！", {
-        body: table,
-        icon: "https://via.placeholder.com/64?text=訂單"
-      });
-    }
+    // 3.5 秒後重播一次（確保聽到）
+    setTimeout(() => {
+      if (!isSpeaking) speechSynth.speak(utterance);
+    }, 3500);
   }
 
+  // 啟動語音監聽（請確保這行有被呼叫）
   function initVoiceNotification() {
-    // 請求通知權限
     if (Notification.permission === "default") Notification.requestPermission();
 
-    // 監聽新訂單
     ordersRef.on('value', snapshot => {
       const orders = snapshot.val() || {};
-      const total = Object.keys(orders).length;
+      const totalOrders = Object.keys(orders).length;
 
-      if (total > lastOrderCount) {
+      if (totalOrders > lastOrderCount) {
         Object.entries(orders).forEach(([id, order]) => {
           if (!order.notified) {
             ordersRef.child(id).update({ notified: true });
-            speakNewOrder(order.table);
-            // 可選：重複播報一次（更醒神）
-            setTimeout(() => speakNewOrder(order.table), 3000);
-          }
-        });
-      }
-      lastOrderCount = total;
-    });
-  }
+
+            //
 
 
 </script>
 </body>
 </html>
+
 
